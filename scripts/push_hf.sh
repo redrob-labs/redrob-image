@@ -59,6 +59,7 @@ STAGING="$(mktemp -d)"
 trap 'rm -rf "$STAGING"' EXIT
 
 cp -f "$ROOT/README.md" "$STAGING/README.md"
+cp -f "$ROOT/README.ko.md" "$STAGING/README.ko.md"
 cp -f "$ROOT/LICENSE" "$STAGING/LICENSE"
 cp -f "$ROOT/NOTICE" "$STAGING/NOTICE"
 mkdir -p "$STAGING/workflows"
