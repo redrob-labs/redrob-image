@@ -1,0 +1,3 @@
+# Weights are large - track with Git LFS when publishing; keep local copies out of accidental commits without LFS.
+*.safetensors
+!/.gitattributes
