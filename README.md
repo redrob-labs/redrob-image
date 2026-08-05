@@ -16,7 +16,9 @@ pipeline_tag: text-to-image
 
 # Redrob Image
 
-**Redrob Image** is [Redrob](https://redrob.io)'s open-weight diffusion model, built by [Janghoon Lee](https://www.janghoonlee.com).
+[한국어](./README.ko.md)
+
+**Redrob Image** is [Redrob](https://redrob.io)'s open-weight diffusion model, built by [Janghoon Lee / 이장훈](https://www.janghoonlee.com).
 
 Redrob's vision is to democratize AI. Our models are free to use and free for commercial use, under [Apache License 2.0](./LICENSE).
 
@@ -96,10 +98,11 @@ Load `workflows/redrob-image-api.json` for a minimal working graph. The graph ze
 | `redrob-image.safetensors`        | ComfyUI merged UNET (LFS, ~12 GiB)    |
 | `transformer/`                    | Diffusers layout (built at HF upload) |
 | `workflows/redrob-image-api.json` | Minimal ComfyUI API graph             |
+| `README.md` / `README.ko.md`      | Model card (English / Korean)         |
 | `LICENSE`                         | Apache License 2.0                    |
 | `NOTICE`                          | Attribution                           |
 
-`transformer/` is not in git. On Hugging Face upload, `scripts/push_hf.sh` converts the Comfy UNET into Diffusers format (or copies a prebuilt `TRANSFORMER_DIR`). Until that upload lands, the Diffusers snippet above will not resolve.
+`transformer/` is not in git. On Hugging Face upload, `scripts/push_hf.sh` converts the Comfy UNET into Diffusers format (or copies a prebuilt `TRANSFORMER_DIR`).
 
 Convert a local Comfy UNET yourself:
 
@@ -111,4 +114,4 @@ python scripts/comfy_to_diffusers_zimage.py \
 
 ## License
 
-[Apache License 2.0](./LICENSE). Redistributors keep [NOTICE](./NOTICE) with the weights.
+[Apache License 2.0](./LICENSE). Copyright holders and upstream attribution are in [NOTICE](./NOTICE), including Janghoon Lee / 이장훈. Redistributors keep NOTICE with the weights.
