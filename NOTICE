@@ -2,7 +2,7 @@ Redrob Image
 ============
 
 Copyright 2026 Redrob (https://redrob.io)
-Copyright 2026 Janghoon Lee (https://www.janghoonlee.com)
+Copyright 2026 Janghoon Lee / 이장훈 (https://www.janghoonlee.com)
 Date: August 5, 2026
 
 Licensed under the Apache License, Version 2.0.
@@ -25,7 +25,7 @@ Copyright notices from the upstream project are retained to the extent
 applicable.
 
 ---------------------------------------------------------------------------
-Modifications by Redrob (built by Janghoon Lee)
+Modifications by Redrob (built by Janghoon Lee / 이장훈)
 ---------------------------------------------------------------------------
 
 - Style adapter baked into the UNET at strength 0.7 (ComfyUI
