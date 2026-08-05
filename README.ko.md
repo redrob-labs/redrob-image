@@ -2,7 +2,7 @@
 
 [English](./README.md)
 
-**Redrob Image**는 [Redrob](https://redrob.io)의 오픈웨이트 확산 모델이고, [이장훈 / Janghoon Lee](https://www.janghoonlee.com)가 만들었습니다.
+**Redrob Image**는 [Redrob](https://redrob.io)의 오픈웨이트 확산 모델이고, [이장훈 (Janghoon Lee)](https://www.janghoonlee.com)가 만들었습니다.
 
 Redrob의 비전은 AI를 민주화하는 것 같은데요. 이 모델은 [Apache License 2.0](./LICENSE) 아래에서 무료로 쓰고, 상업적으로도 쓸 수 있습니다.
 
@@ -98,10 +98,10 @@ python scripts/comfy_to_diffusers_zimage.py \
 
 ## 라이선스
 
-[Apache License 2.0](./LICENSE). 저작권자와 업스트림 표기는 [NOTICE](./NOTICE)에 있습니다 (이장훈 / Janghoon Lee 포함). 재배포할 때는 NOTICE를 가중치와 함께 유지하세요.
+[Apache License 2.0](./LICENSE). 저작권은 [Redrob](https://redrob.io). 제작은 [이장훈 (Janghoon Lee)](https://www.janghoonlee.com). 업스트림 표기는 [NOTICE](./NOTICE). 재배포할 때는 NOTICE를 가중치와 함께 유지하세요.
 
 ## 저작 / 출처
 
-- **제품:** Redrob Image ([Redrob](https://redrob.io))
-- **제작:** [이장훈 / Janghoon Lee](https://www.janghoonlee.com) ([@savagemanage](https://github.com/savagemanage))
+- **저작권:** Redrob ([redrob.io](https://redrob.io))
+- **제작:** [이장훈 (Janghoon Lee)](https://www.janghoonlee.com) ([@savagemanage](https://github.com/savagemanage))
 - **베이스:** [Tongyi-MAI/Z-Image-Turbo](https://huggingface.co/Tongyi-MAI/Z-Image-Turbo) - Apache License 2.0
