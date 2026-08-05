@@ -18,7 +18,7 @@ pipeline_tag: text-to-image
 
 [한국어](./README.ko.md)
 
-**Redrob Image** is [Redrob](https://redrob.io)'s open-weight diffusion model, built by [Janghoon Lee / 이장훈](https://www.janghoonlee.com).
+**Redrob Image** is [Redrob](https://redrob.io)'s open-weight diffusion model, built by [Janghoon Lee (이장훈)](https://www.janghoonlee.com).
 
 Redrob's vision is to democratize AI. Our models are free to use and free for commercial use, under [Apache License 2.0](./LICENSE).
 
@@ -114,4 +114,10 @@ python scripts/comfy_to_diffusers_zimage.py \
 
 ## License
 
-[Apache License 2.0](./LICENSE). Copyright holders and upstream attribution are in [NOTICE](./NOTICE), including Janghoon Lee / 이장훈. Redistributors keep NOTICE with the weights.
+[Apache License 2.0](./LICENSE). Copyright [Redrob](https://redrob.io). Built by [Janghoon Lee (이장훈)](https://www.janghoonlee.com). Upstream attribution is in [NOTICE](./NOTICE). Redistributors keep NOTICE with the weights.
+
+## Attribution
+
+- **Copyright:** Redrob ([redrob.io](https://redrob.io))
+- **Built by:** [Janghoon Lee (이장훈)](https://www.janghoonlee.com) ([@savagemanage](https://github.com/savagemanage))
+- **Base model:** [Tongyi-MAI/Z-Image-Turbo](https://huggingface.co/Tongyi-MAI/Z-Image-Turbo) - Apache License 2.0
