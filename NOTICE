@@ -1,0 +1,47 @@
+Redrob Image
+============
+
+Copyright 2026 Redrob (https://redrob.io)
+Copyright 2026 Janghoon Lee (https://www.janghoonlee.com)
+Date: August 5, 2026
+
+Licensed under the Apache License, Version 2.0.
+https://www.apache.org/licenses/LICENSE-2.0
+
+This distribution is a modified derivative of Z-Image-Turbo.
+
+---------------------------------------------------------------------------
+Upstream attribution
+---------------------------------------------------------------------------
+
+This product includes model weights derived from:
+
+  Tongyi-MAI / Z-Image-Turbo
+  https://huggingface.co/Tongyi-MAI/Z-Image-Turbo
+  https://github.com/Tongyi-MAI/Z-Image
+
+Licensed under the Apache License, Version 2.0.
+Copyright notices from the upstream project are retained to the extent
+applicable.
+
+---------------------------------------------------------------------------
+Modifications by Redrob (built by Janghoon Lee)
+---------------------------------------------------------------------------
+
+- Style adapter baked into the UNET at strength 0.7 (ComfyUI
+  LoraLoaderModelOnly -> state_dict bake).
+- Branded the distribution artifact as Redrob Image
+  (modelspec + redrob.* safetensors metadata).
+- Packaged for ComfyUI UNETLoader (diffusion_models layout) and as a
+  Diffusers ZImageTransformer2DModel under transformer/.
+
+---------------------------------------------------------------------------
+Companion weights (not in this package by default)
+---------------------------------------------------------------------------
+
+Runtime still typically requires (from Comfy-Org / Tongyi packs):
+
+  - qwen_3_4b_fp8_mixed.safetensors  (text encoder)
+  - ae.safetensors                   (VAE)
+
+See README.md.
