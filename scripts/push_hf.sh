@@ -16,7 +16,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-HF_REPO="${HF_REPO:?Set HF_REPO e.g. savagemanage/redrob-image}"
+HF_REPO="${HF_REPO:?Set HF_REPO e.g. redrob-labs/redrob-image}"
 WEIGHT="${WEIGHT:-$ROOT/redrob-image.safetensors}"
 TRANSFORMER_DIR="${TRANSFORMER_DIR:-}"
 COMFY_VENV="${COMFY_VENV:-$HOME/ComfyUI/venv}"

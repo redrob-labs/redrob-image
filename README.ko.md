@@ -34,7 +34,7 @@ import torch
 from diffusers import ZImagePipeline, ZImageTransformer2DModel
 
 transformer = ZImageTransformer2DModel.from_pretrained(
-    "savagemanage/redrob-image",
+    "redrob-labs/redrob-image",
     subfolder="transformer",
     torch_dtype=torch.bfloat16,
 )
@@ -104,4 +104,5 @@ python scripts/comfy_to_diffusers_zimage.py \
 
 - **저작권:** Redrob ([redrob.io](https://redrob.io))
 - **제작:** [이장훈 (Janghoon Lee)](https://www.janghoonlee.com) ([@savagemanage](https://github.com/savagemanage))
+- **저장소:** [redrob-labs/redrob-image](https://huggingface.co/redrob-labs/redrob-image)
 - **베이스:** [Tongyi-MAI/Z-Image-Turbo](https://huggingface.co/Tongyi-MAI/Z-Image-Turbo) - Apache License 2.0
