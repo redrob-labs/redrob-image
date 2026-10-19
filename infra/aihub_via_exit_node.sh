@@ -15,5 +15,5 @@ curl -s -m 10 https://ipinfo.io/json | grep -E '"(city|country|org)"'
 code=$(curl -s -m 20 -r 0-200 -o /dev/null -w '%{http_code}' -H "apikey:$AIHUB_APIKEY" \
   "https://api.aihub.or.kr/down/0.6/$DS.do?fileSn=$1" || true)
 echo "aihub probe: $code"
-[ "$code" = 200 ] || [ "$code" = 206 ] || { echo "AI Hub still refuses"; exit 1; }
+case "$code" in 2*|3*) ;; *) echo "AI Hub still refuses"; exit 1 ;; esac  # 302 = redirect to the file
 bash "$ROOT/aihub_download.sh" "$DS" "$@"
