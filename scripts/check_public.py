@@ -29,7 +29,7 @@ PATTERNS = [
     (re.compile(r"/(?:aihub_raw|aihub_cache)/", re.I), "AI Hub raw path"),
 ]
 # Files whose numbers are expected (CSV costs, lockfiles) skip the account-id check.
-ACCOUNT_ID_EXEMPT = ("paper/cost.csv",)
+ACCOUNT_ID_EXEMPT = ("paper/cost.csv", "synth/fonts/manifest.json")  # manifest: sha256 hex digests
 # Files that name the patterns on purpose.
 SELF_EXEMPT = (".gitignore", "scripts/check_public.py")
 
