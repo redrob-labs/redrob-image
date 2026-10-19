@@ -103,10 +103,11 @@ def aggregate(rows: list[dict], keys=("split", "bucket", "scene", "has_unseen_sy
         for r in rows:
             g[str(r.get(k))].append(r)
         out[k] = {v: summ(rs) for v, rs in sorted(g.items())}
-    g = defaultdict(list)
-    for r in rows:
-        g[f"{r['split']}/{r['bucket']}"].append(r)
-    out["split_bucket"] = {v: summ(rs) for v, rs in sorted(g.items())}
+    if all("split" in r and "bucket" in r for r in rows):
+        g = defaultdict(list)
+        for r in rows:
+            g[f"{r['split']}/{r['bucket']}"].append(r)
+        out["split_bucket"] = {v: summ(rs) for v, rs in sorted(g.items())}
     return out
 
 

@@ -77,7 +77,7 @@ def main() -> None:
                 rows.append(r)
                 f.write(json.dumps(r, ensure_ascii=False) + "\n")
         agg = metrics.aggregate(rows, keys=("kind", "aug", "font"))
-        del agg["split_bucket"]
+        agg.pop("split_bucket", None)
         summary[name] = dict(
             overall=agg["overall"], by_kind=agg["kind"], by_aug=agg["aug"], by_font=agg["font"],
             syllable_recall={k: dict(hit=v[0], n=v[1], recall=v[0] / max(1, v[1])) for k, v in syl.items()},
