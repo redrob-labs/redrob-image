@@ -22,7 +22,10 @@ from pathlib import Path
 def name_of(info: zipfile.ZipInfo) -> str:
     if info.flag_bits & 0x800:
         return info.filename
-    raw = info.filename.encode("cp437")
+    try:
+        raw = info.filename.encode("cp437")
+    except UnicodeEncodeError:  # already decoded properly (e.g. Unicode path extra field)
+        return info.filename
     for enc in ("utf-8", "cp949"):
         try:
             return raw.decode(enc)
