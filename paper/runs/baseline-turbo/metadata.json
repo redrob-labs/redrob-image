@@ -1,0 +1,43 @@
+{
+ "model": "Tongyi-MAI/Z-Image-Turbo",
+ "steps": 9,
+ "guidance": 0.0,
+ "negative_prompt": "",
+ "cfg_normalization": false,
+ "resolution": 1024,
+ "seeds": [
+  42
+ ],
+ "lang": "ko",
+ "prompts": [
+  "eval/prompts.jsonl",
+  "eval/prompts_unseen_syllables.jsonl"
+ ],
+ "subset": 0,
+ "n_prompts": 220,
+ "n_images": 220,
+ "dtype": "bfloat16",
+ "ocr": "qwen3vl-8b",
+ "ocr_sec_per_image": 0.5933388688347556,
+ "ocr_load_sec": 95.29915738105774,
+ "generation": {
+  "generated": 220,
+  "sec_per_image": 3.704996728461627,
+  "load_sec": 251.91222715377808,
+  "first_image_sec": 4.49816107749939,
+  "peak_mem_gb": 21.66933012008667
+ },
+ "git_commit": "38a6e734ad89f19915bf4dfb8dfd4d03fe82837e",
+ "packages": {
+  "python": "3.12.3",
+  "torch": "2.11.0+cu128",
+  "diffusers": "0.42.0.dev0",
+  "transformers": "5.20.1",
+  "accelerate": "1.15.0",
+  "easyocr": "1.7.2"
+ },
+ "gpu": "NVIDIA L40S",
+ "host": "gpu-box",
+ "started": "2026-10-19T16:03:37+0000",
+ "wall_sec": 1391.0689432621002
+}
