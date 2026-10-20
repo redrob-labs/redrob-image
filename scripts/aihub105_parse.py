@@ -108,6 +108,41 @@ def collect81(root: Path) -> tuple[list[dict], collections.Counter]:
     return jobs, drops
 
 
+def collect_nvidia(root: Path) -> tuple[list[dict], collections.Counter]:
+    """nvidia/OCR-Synthetic-Multilingual-v1 HDF5 files (CC BY 4.0). Every rendered line is labeled, so line
+    boxes become text blocks and full pages are clean. Images stay inside the .h5; jobs point at (file, index)."""
+    import h5py
+
+    jobs, drops = [], collections.Counter()
+    for h in sorted(root.rglob("*.h5")):
+        split = "val" if "/validation/" in str(h) or "/test/" in str(h) else "train"
+        with h5py.File(h, "r") as f:
+            dims = f["dimensions"][:]
+            for i, raw in enumerate(f["annotations"]):
+                ann = json.loads(raw)
+                lines = [{"text": ln.get("text") or "", "bbox": ln.get("bbox")} for ln in ann.get("line_bboxes", [])]
+                if not lines:
+                    drops["no_lines"] += 1
+                    continue
+                jobs.append({"img": f"{h}#{i}", "h5": str(h), "idx": i, "stem": f"{h.stem}-{i:06d}", "label": "", "ann": lines,
+                             "size": [int(dims[i][1]), int(dims[i][0])], "split": split, "set": "ocrsyn",
+                             "category": "document", "subclass": h.stem})
+    return jobs, drops
+
+
+_H5: dict = {}
+
+
+def read_raw(job: dict) -> bytes:
+    if "h5" not in job:
+        return Path(job["img"]).read_bytes()
+    import h5py
+
+    if job["h5"] not in _H5:
+        _H5[job["h5"]] = h5py.File(job["h5"], "r")
+    return _H5[job["h5"]]["images"][job["idx"]].tobytes()
+
+
 def collect(root: Path) -> tuple[list[dict], collections.Counter]:
     data_roots = sorted(root.glob("*/01.데이터"))
     if not data_roots:
@@ -282,7 +317,7 @@ def work(args) -> dict:
                     d = {"images": [{"width": job["size"][0], "height": job["size"][1]}], "annotations": job["ann"]}
                 else:
                     d = json.load(open(job["label"], encoding="utf-8"))
-                im = load_image(Path(job["img"]), d)
+                im = load_image(job, d)
             except Exception:
                 drops["unreadable_file"] += 1
                 continue
@@ -309,10 +344,11 @@ def work(args) -> dict:
             if any(F.reason(t) for t in texts):
                 drops["unseen"] += 1
                 continue
+            src_stem = job.get("stem") or Path(job["img"]).stem
             base = {"source": a.source.replace("aihub", "aihub-"), "split": split, "set": job["set"], "category": job["category"],
-                    "subclass": job["subclass"], "src_stem": Path(job["img"]).stem, "src_size": [W, H],
+                    "subclass": job["subclass"], "src_stem": src_stem, "src_size": [W, H],
                     "md5": job["md5"], "dhash": job["dhash"]}
-            stem = f"{job['set']}-{Path(job['img']).stem}"
+            stem = f"{job['set']}-{src_stem}"
             before = len(index)
             sc_full = a.full_check_res / (W * H) ** 0.5
             unlabeled_legible = any(t is None and min(b[2] - b[0], b[3] - b[1]) * sc_full >= a.ignore_text_px
@@ -340,9 +376,9 @@ def work(args) -> dict:
     return {"shard": str(shard), "index": index, "drops": drops}
 
 
-def load_image(p: Path, d: dict) -> Image.Image | None:
+def load_image(job: dict, d: dict) -> Image.Image | None:
     """Image in the orientation its label was drawn on, or None if neither orientation matches."""
-    im = Image.open(p)
+    im = Image.open(io.BytesIO(read_raw(job)))
     want = (d["images"][0]["width"], d["images"][0]["height"])
     if im.size == want:
         return im.convert("RGB")
@@ -351,7 +387,7 @@ def load_image(p: Path, d: dict) -> Image.Image | None:
 
 
 def hash_job(job: dict) -> dict:
-    raw = Path(job["img"]).read_bytes()
+    raw = read_raw(job)
     try:
         h = f"{dhash(Image.open(io.BytesIO(raw))):016x}"
     except Exception:
@@ -362,7 +398,7 @@ def hash_job(job: dict) -> dict:
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--root", required=True, type=Path)
-    ap.add_argument("--dataset", choices=["105", "81"], default="105", help="AI Hub dataset layout of --root")
+    ap.add_argument("--dataset", choices=["105", "81", "nvidia"], default="105", help="dataset layout of --root")
     ap.add_argument("--out", required=True, type=Path)
     ap.add_argument("--workers", type=int, default=max(1, (os.cpu_count() or 2) - 2))
     ap.add_argument("--per-shard", type=int, default=300, help="source images per shard")
@@ -382,9 +418,9 @@ def main() -> int:
     ap.add_argument("--s3", default="", help="s3://private-bucket/prefix to sync shards to (ap-northeast-2)")
     a = ap.parse_args()
     a.root, a.out = a.root.expanduser(), a.out.expanduser()
-    a.source = f"aihub{a.dataset}"
+    a.source = {"105": "aihub105", "81": "aihub81", "nvidia": "nvidia_ocr_ko"}[a.dataset]
 
-    jobs, drops = (collect81 if a.dataset == "81" else collect)(a.root)
+    jobs, drops = {"105": collect, "81": collect81, "nvidia": collect_nvidia}[a.dataset](a.root)
     if a.limit:
         jobs = jobs[: a.limit]
     print(f"{len(jobs)} paired images; hashing for duplicates", flush=True)
