@@ -1,5 +1,5 @@
 # Path B: full fine-tuning of Z-Image (Base) on one p5.48xlarge (8x H100 80 GB). DO NOT LAUNCH without approval.
-# torchrun --nproc-per-node 8 scripts/train_full.py --config configs/p5.yaml --run /opt/dlami/nvme/runs/pathb-v1
+# torchrun --nproc-per-node 8 scripts/train_full.py --config configs/p5.yaml --run-dir /opt/dlami/nvme/runs/pathb-v1
 model: Tongyi-MAI/Z-Image
 precomp: /opt/dlami/nvme/precomp   # synced from s3://<bucket>/precomp/ before start (see docs/path-b-runbook.md)
 s3: ""                             # s3://<private bucket>/runs/pathb-v1 -- required on p5 (spot/CB end loses the NVMe)

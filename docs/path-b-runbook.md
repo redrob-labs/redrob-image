@@ -62,14 +62,14 @@ If the measured rate is under 3 samples/s/GPU, cut the 512 epoch to the AI Hub +
    aws s3 sync s3://<bucket>/precomp /opt/dlami/nvme/precomp --region ap-northeast-2
    export HF_HOME=/opt/dlami/nvme/hf
    setsid nohup ~/venv/bin/torchrun --nproc-per-node 8 scripts/train_full.py --config configs/p5.yaml \
-       --run /opt/dlami/nvme/runs/pathb-v1 > /opt/dlami/nvme/runs/pathb-v1.log 2>&1 &
+       --run-dir /opt/dlami/nvme/runs/pathb-v1 > /opt/dlami/nvme/runs/pathb-v1.log 2>&1 &
    setsid nohup ~/venv/bin/python infra/cost_guard.py --pid <torchrun pid> --usd-per-hour 31 \
        --budget-usd <approved budget> --max-hours <block hours - 1> --log /opt/dlami/nvme/runs/cost_guard.log &
    ```
 4. Watch `log.jsonl` (loss, samples/s, memory). Checkpoints every 30 min go to `s3://<bucket>/runs/pathb-v1/ckpt`.
 5. Interruption or block end: the trainer checkpoints on SIGTERM; re-run the same command on a new node to resume
    (same world size, 8).
-6. Export: `torchrun --nproc-per-node 8 scripts/train_full.py --config configs/p5.yaml --run ... --export <dir>`,
+6. Export: `torchrun --nproc-per-node 1 scripts/train_full.py --config configs/p5.yaml --run-dir ... --export <dir>`,
    then `aws s3 sync <dir> s3://<bucket>/models/zimage-ko-base-v1`.
 7. Evaluate on a g6e (not on p5): `scripts/eval_baseline.py --model <exported pipeline dir> --steps 28 --guidance 4`.
 8. Terminate the node (cost guard does it when the trainer exits). Confirm in the console that nothing is left running.

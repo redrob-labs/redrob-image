@@ -10,11 +10,12 @@ Same data (scripts/precompute.py), loss and stage schedule as scripts/train_lora
   - an EMA copy is not kept (memory); export picks the last or best checkpoint.
 `--trainable-blocks N` limits training to the last N blocks: only for a single-GPU dry run of this code path.
 
-    torchrun --nproc-per-node 8 scripts/train_full.py --config configs/p5.yaml --run /opt/runs/pathb
-    torchrun --nproc-per-node 1 scripts/train_full.py --config configs/smoke.yaml --run ~/runs/full-dry \
+    torchrun --nproc-per-node 8 scripts/train_full.py --config configs/p5.yaml --run-dir /opt/runs/pathb
+    torchrun --nproc-per-node 1 scripts/train_full.py --config configs/smoke.yaml --run-dir ~/runs/full-dry \
         --max-steps 20 --trainable-blocks 2
-Export a diffusers transformer folder from a checkpoint:
-    python scripts/train_full.py --config configs/p5.yaml --run /opt/runs/pathb --export /opt/runs/pathb/export
+Export a diffusers transformer folder from a checkpoint (model weights only, any world size):
+    torchrun --nproc-per-node 1 scripts/train_full.py --config configs/p5.yaml --run-dir /opt/runs/pathb --export /opt/runs/pathb/export
+The flag is --run-dir, not --run: torchrun would take --run as an abbreviation of its own --run-path.
 """
 from __future__ import annotations
 
@@ -44,7 +45,7 @@ def on_signal(signum, _frame):
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--config", required=True)
-    ap.add_argument("--run", required=True, type=Path)
+    ap.add_argument("--run-dir", dest="run", required=True, type=Path)
     ap.add_argument("--max-steps", type=int, default=0)
     ap.add_argument("--trainable-blocks", type=int, default=0)
     ap.add_argument("--export", default="", help="write a diffusers transformer folder from the newest checkpoint and exit")
@@ -113,7 +114,14 @@ def main() -> int:
     state = {"stage": 0, "epoch": 0, "batch": 0, "step": 0}
     done = sorted((p for p in ckdir.glob("step-*") if (p / "state.json").exists()), key=lambda p: int(p.name.split("-")[1])) \
         if ckdir.exists() else []
-    if done:
+    if done and a.export:
+        from torch.distributed.checkpoint.state_dict import get_model_state_dict, set_model_state_dict
+
+        msd = get_model_state_dict(tr)
+        dcp.load({"model": msd}, checkpoint_id=str(done[-1]))  # model keys only; DCP reshards to this world size
+        set_model_state_dict(tr, msd)
+        say(f"loaded model weights from {done[-1]}")
+    elif done:
         msd, osd = get_state_dict(tr, opt)
         sd = {"model": msd, "optim": osd}
         dcp.load(sd, checkpoint_id=str(done[-1]))
@@ -122,6 +130,8 @@ def main() -> int:
         say(f"resumed {done[-1]} at step {state['step']}")
 
     if a.export:
+        if not done:
+            raise SystemExit("no checkpoint to export")
         from torch.distributed.checkpoint.state_dict import StateDictOptions, get_model_state_dict
 
         full = get_model_state_dict(tr, options=StateDictOptions(full_state_dict=True, cpu_offload=True))
