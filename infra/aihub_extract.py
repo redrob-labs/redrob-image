@@ -68,7 +68,7 @@ def extract(zp: Path, root: Path) -> bool:
     n = 0
     with z:
         for info in z.infolist():
-            name = name_of(info)
+            name = name_of(info).lstrip("/\\")  # some AI Hub zips (71553) store absolute member names
             target = (dest / name).resolve()
             if not str(target).startswith(str(dest.resolve())):
                 raise RuntimeError(f"unsafe path in {rel}: {name}")
