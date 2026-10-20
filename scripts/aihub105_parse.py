@@ -20,7 +20,7 @@ Per image:
     and showing no unreadable text that would be legible at --train-res.
 Mixing full vs crop is a training-config choice; every sample carries "kind".
 
-Outputs (never commit -- AI Hub data): <out>/<split>/aihub105-<split>-XXXXX.tar (<key>.jpg + <key>.json),
+Outputs (never commit -- AI Hub data): <out>/<split>/<source>-<split>-XXXXX.tar (<key>.jpg + <key>.json),
 <out>/index.jsonl (one line per sample, metadata only), <out>/drops.json.
 Stats (numbers only, safe to commit): scripts/aihub105_report.py.
 
@@ -146,6 +146,67 @@ def collect633(root: Path) -> tuple[list[dict], collections.Counter]:
         jobs.append({"img": p, "label": "", "ann": out, "size": [im.get("width", 0), im.get("height", 0)],
                      "split": "val" if "2._Validation" in lp else "train", "set": "pack",
                      "category": cls, "subclass": (im.get("product_category") or "").replace(" ", "_")})
+    return jobs, drops
+
+
+def collect71553(root: Path) -> tuple[list[dict], collections.Counter]:
+    """AI Hub 71553 menu boards: one JSON per image (meta + annotations[].ocr with x/y/width/height in PERCENT of
+    the image). Only menu names are labeled; prices and other text are not. scripts/detect_text.py writes text
+    boxes to <root>/det/<stem>.json; a detected box that is not mostly inside a labeled box becomes unreadable
+    text, so the crop search keeps it out of every crop and full scenes with it are skipped.
+    Images without a detection file are not used."""
+    files, labels = {}, []
+    for dp, _, fs in os.walk(root / "extracted"):
+        for f in fs:
+            ext = Path(f).suffix.lower()
+            if ext in IMG_EXT:
+                files[f] = os.path.join(dp, f)
+            elif ext == ".json" and "라벨링데이터" in dp:
+                labels.append(os.path.join(dp, f))
+    det_dir = root / "det"
+    jobs, drops = [], collections.Counter()
+    for lp in sorted(labels):
+        try:
+            d = json.load(open(lp, encoding="utf-8"))
+        except Exception:
+            drops["unreadable_label"] += 1
+            continue
+        m = d.get("meta") or {}
+        fn = m.get("file_name") or ""
+        p = files.get(fn) or files.get(f"{Path(fn).stem}-tf{Path(fn).suffix}")  # stored images carry a "-tf" suffix
+        if p is None:
+            drops["image_not_downloaded"] += 1
+            continue
+        dp_ = det_dir / f"{Path(p).stem}.json"
+        if not dp_.exists():
+            drops["no_detection"] += 1
+            continue
+        W, H = m.get("image_original_width", 0), m.get("image_original_height", 0)
+        det = json.load(open(dp_, encoding="utf-8"))
+        if tuple(det.get("size", ())) != (W, H):
+            det = det.get("rotated") or {}
+        if tuple(det.get("size", ())) != (W, H):
+            drops["detection_orientation_mismatch"] += 1  # labels and detection must see the same orientation
+            continue
+        out, lab = [], []
+        for an in d.get("annotations") or []:
+            o = an.get("ocr") or {}
+            try:
+                b = [o["x"] * W / 100, o["y"] * H / 100, o["width"] * W / 100, o["height"] * H / 100]
+            except (KeyError, TypeError):
+                out.append({"text": o.get("text") or "", "bbox": None})
+                continue
+            out.append({"text": o.get("text") or "", "bbox": b})
+            lab.append((b[0], b[1], b[0] + b[2], b[1] + b[3]))
+        for x0, y0, x1, y1 in det.get("boxes", []):
+            area = max((x1 - x0) * (y1 - y0), 1e-6)
+            if any(overlap((x0, y0, x1, y1), l) / area >= 0.5 for l in lab):
+                continue
+            out.append({"text": "xxx", "bbox": [x0, y0, x1 - x0, y1 - y0]})
+            drops["det_unlabeled_boxes"] += 1
+        jobs.append({"img": p, "label": "", "ann": out, "size": [W, H],
+                     "split": "val" if "/Validation/" in lp else "train", "set": "menu",
+                     "category": "menu", "subclass": m.get("store_region", "")})
     return jobs, drops
 
 
@@ -452,7 +513,7 @@ def hash_job(job: dict) -> dict:
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--root", required=True, type=Path)
-    ap.add_argument("--dataset", choices=["105", "81", "633", "nvidia"], default="105", help="dataset layout of --root")
+    ap.add_argument("--dataset", choices=["105", "81", "633", "71553", "nvidia"], default="105", help="dataset layout of --root")
     ap.add_argument("--out", required=True, type=Path)
     ap.add_argument("--workers", type=int, default=max(1, (os.cpu_count() or 2) - 2))
     ap.add_argument("--per-shard", type=int, default=300, help="source images per shard")
@@ -474,9 +535,10 @@ def main() -> int:
     ap.add_argument("--s3", default="", help="s3://private-bucket/prefix to sync shards to (ap-northeast-2)")
     a = ap.parse_args()
     a.root, a.out = a.root.expanduser(), a.out.expanduser()
-    a.source = {"105": "aihub105", "81": "aihub81", "633": "aihub633", "nvidia": "nvidia_ocr_ko"}[a.dataset]
+    a.source = {"105": "aihub105", "81": "aihub81", "633": "aihub633", "71553": "aihub71553", "nvidia": "nvidia_ocr_ko"}[a.dataset]
 
-    jobs, drops = {"105": collect, "81": collect81, "633": collect633, "nvidia": collect_nvidia}[a.dataset](a.root)
+    jobs, drops = {"105": collect, "81": collect81, "633": collect633, "71553": collect71553,
+                   "nvidia": collect_nvidia}[a.dataset](a.root)
     if a.limit:
         jobs = jobs[: a.limit]
     print(f"{len(jobs)} paired images; hashing for duplicates", flush=True)
