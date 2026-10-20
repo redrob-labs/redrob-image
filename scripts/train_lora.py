@@ -110,6 +110,80 @@ def lora_targets(cfg: dict) -> list[str]:
     return cfg.get("targets", ["to_q", "to_k", "to_v", "to_out.0"])
 
 
+class StableVal:
+    """Deterministic validation loss on a held-out pre-computed set (SD3, Esser et al. 2024, App. B.3): every
+    sample is scored at fixed, equally spaced noise levels t = (k + 0.5) / levels with noise from a per-sample
+    seed, so the number moves only when the weights do. Logged overall, per source and per level."""
+
+    def __init__(self, cfg: dict):
+        from safetensors import safe_open
+
+        self.cfg = cfg
+        d = Path(os.path.expanduser(cfg["precomp"])) / str(cfg.get("res", 512))
+        rows = [json.loads(ln) for ln in open(d / "index.jsonl", encoding="utf-8")]
+        n = cfg.get("max_samples", 0)
+        self.rows = sorted(rows, key=lambda r: (r["source"], r["file"], r["i"]))[: n or None]
+        self.dir, self.h = d, {}
+        self.levels = cfg.get("levels", 8)
+        self.variant = cfg.get("variant", "ko_long")
+        self._open = lambda f: self.h.setdefault(f, safe_open(str(d / f), framework="pt"))
+
+    def __call__(self, transformer) -> dict:
+        import torch
+
+        L = self.levels
+        sig = torch.tensor([(k + 0.5) / L for k in range(L)], device="cuda").view(-1, 1, 1, 1)
+        per_src, per_lvl, tot = defaultdict(list), torch.zeros(L), []
+        was_training = transformer.training
+        transformer.eval()
+        with torch.no_grad(), torch.autocast("cuda", dtype=torch.bfloat16):
+            for j, r in enumerate(self.rows):
+                h = self._open(r["file"])
+                x0 = h.get_tensor(f"{r['i']}.lat").to("cuda", torch.float32).unsqueeze(0).expand(L, -1, -1, -1)
+                v = self.variant if self.variant in r["variants"] else r["variants"][0]
+                txt = h.get_tensor(f"{r['i']}.txt.{v}").to("cuda")
+                g = torch.Generator("cuda").manual_seed(self.cfg.get("seed", 1234) + j)
+                noise = torch.randn(x0.shape, generator=g, device="cuda")
+                xt = (1 - sig) * x0 + sig * noise
+                out = transformer(list(xt.to(torch.bfloat16).unsqueeze(2).unbind(0)), (1 - sig.view(-1)).to(torch.bfloat16),
+                                  [txt] * L, return_dict=False)[0]
+                pred = -torch.stack(out, 0).squeeze(2).float()
+                lv = ((pred - (noise - x0)) ** 2).mean(dim=(1, 2, 3)).cpu()
+                per_lvl += lv
+                per_src[r["source"]].append(lv.mean().item())
+                tot.append(lv.mean().item())
+        if was_training:
+            transformer.train()
+        n = max(len(tot), 1)
+        return {"val_loss": round(sum(tot) / n, 6), "n": len(tot),
+                "by_source": {s: round(sum(v) / len(v), 6) for s, v in sorted(per_src.items())},
+                "by_level": [round(x, 6) for x in (per_lvl / n).tolist()]}
+
+
+def log_val(run: Path, sv: StableVal, transformer, step: int):
+    t0 = time.time()
+    if not (run / "val_base.json").exists():
+        with _adapters_off(transformer):
+            base = sv(transformer)
+        (run / "val_base.json").write_text(json.dumps(base, indent=2), encoding="utf-8")
+        print(f"val base (no LoRA): {base['val_loss']}", flush=True)
+    rec = {"step": step} | sv(transformer) | {"seconds": round(time.time() - t0, 1)}
+    with open(run / "val.jsonl", "a", encoding="utf-8") as f:
+        f.write(json.dumps(rec) + "\n")
+    print("val " + json.dumps(rec), flush=True)
+
+
+class _adapters_off:
+    def __init__(self, m):
+        self.m = m
+
+    def __enter__(self):
+        self.m.disable_adapters()
+
+    def __exit__(self, *exc):
+        self.m.enable_adapters()
+
+
 def save_ckpt(run: Path, tag: str, transformer, opt, state: dict, s3: str, keep: int = 2):
     import torch
     from diffusers import ZImagePipeline
@@ -271,6 +345,12 @@ def main() -> int:
     last_ckpt = time.time()
     t_start, samples_seen, tokens_seen = time.time(), 0, 0
     ev = cfg.get("eval", {})
+    vc = cfg.get("val") or {}
+    sv = None
+    if vc.get("every") and (Path(os.path.expanduser(vc["precomp"])) / str(vc.get("res", 512)) / "index.jsonl").exists():
+        sv = StableVal(vc)
+        print(f"stable val: {len(sv.rows)} held-out samples x {sv.levels} levels every {vc['every']} steps", flush=True)
+        log_val(run, sv, transformer, state["step"])
     transformer.train()
     rng = random.Random(seed + state["step"])
     warmup = cfg["optim"].get("warmup", 100)
@@ -332,6 +412,8 @@ def main() -> int:
                     if STOP["flag"]:
                         print("stopped by signal; re-run the same command to resume", flush=True)
                         return 0
+                if sv and state["step"] % vc["every"] == 0:
+                    log_val(run, sv, transformer, state["step"])
                 if not a.no_eval and ev.get("every") and state["step"] % ev["every"] == 0:
                     run_eval(ev, transformer, run / "eval" / f"step-{state['step']}", model)
                 if done_cap:
@@ -360,6 +442,8 @@ def main() -> int:
                "gpu": torch.cuda.get_device_name(0), "commit": state["commit"]}
     (run / "summary.json").write_text(json.dumps(summary, indent=2), encoding="utf-8")
     print(json.dumps(summary), flush=True)
+    if sv:
+        log_val(run, sv, transformer, state["step"])
     if not a.no_eval and ev.get("every"):
         run_eval(ev, transformer, run / "eval" / f"step-{state['step']}", model)
     return 0

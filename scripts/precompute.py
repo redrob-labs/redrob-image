@@ -144,7 +144,7 @@ def main() -> int:
     ap.add_argument("--model", default="Tongyi-MAI/Z-Image")
     ap.add_argument("--res", type=int, default=512)
     ap.add_argument("--out", required=True, type=Path)
-    ap.add_argument("--aihub", action="append", default=[], help="SHARD_DIR:CAPTIONS_JSONL")
+    ap.add_argument("--aihub", action="append", default=[], help="SHARD_DIR:CAPTIONS_JSONL[:SOURCE_NAME] (source defaults to aihub105)")
     ap.add_argument("--synth", action="append", default=[], help="SHARD_DIR")
     ap.add_argument("--vae-batch", type=int, default=8)
     ap.add_argument("--txt-batch", type=int, default=32)
@@ -156,14 +156,15 @@ def main() -> int:
 
     jobs = []
     for spec in a.aihub:
-        d, cap = spec.split(":", 1)
+        d, cap, *name = spec.split(":", 2)
+        name = name[0] if name else "aihub105"
         caps = {}
         for ln in open(Path(cap).expanduser(), encoding="utf-8"):
             r = json.loads(ln)
             caps[r["key"]] = r["captions"]
         tars = sorted({Path(d).expanduser() / "train" / r for r in
                        {json.loads(ln)["shard"] for ln in open(Path(cap).expanduser(), encoding="utf-8")}})
-        jobs += [("aihub105", t, caps) for t in (tars[: a.max_shards] if a.max_shards else tars)]
+        jobs += [(name, t, caps) for t in (tars[: a.max_shards] if a.max_shards else tars)]
     for d in a.synth:
         tars = sorted(Path(d).expanduser().glob("*.tar"))
         jobs += [("synth", t, None) for t in (tars[: a.max_shards] if a.max_shards else tars)]
