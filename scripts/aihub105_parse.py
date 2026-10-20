@@ -67,6 +67,47 @@ def pair_key(path: Path, data_root: Path) -> tuple[str, str]:
     return rel[0], ("add" if "_add" in rel[1] else "base")
 
 
+def collect81(root: Path) -> tuple[list[dict], collections.Counter]:
+    """AI Hub 81 text-in-the-wild: one textinthewild_data_info.json (COCO-like) for every image.
+    Text blocks are the 'word' boxes; a 'character' box outside every word box becomes its own block;
+    'ignored' boxes are unreadable text. Labels travel inline in the job."""
+    infos = sorted(root.rglob("textinthewild_data_info.json"))
+    if not infos:
+        raise SystemExit(f"no textinthewild_data_info.json under {root}")
+    d = json.load(open(infos[0], encoding="utf-8"))
+    files = {}
+    for dp, _, fs in os.walk(root):
+        for f in fs:
+            if Path(f).suffix.lower() in IMG_EXT:
+                files[f] = os.path.join(dp, f)
+    by_img = collections.defaultdict(list)
+    for an in d["annotations"]:
+        by_img[an["image_id"]].append(an)
+    jobs, drops = [], collections.Counter()
+    for im in d["images"]:
+        p = files.get(im["file_name"])
+        if p is None:
+            drops["image_not_downloaded"] += 1
+            continue
+        anns = by_img.get(im["id"], [])
+        words = [a for a in anns if (a.get("attributes") or {}).get("class") == "word"]
+        wboxes = [(a["bbox"][0], a["bbox"][1], a["bbox"][0] + a["bbox"][2], a["bbox"][1] + a["bbox"][3])
+                  for a in words if isinstance(a.get("bbox"), list) and len(a["bbox"]) == 4]
+        out = [{"text": a.get("text") or "", "bbox": a.get("bbox")} for a in words]
+        for a in anns:
+            c = (a.get("attributes") or {}).get("class")
+            b = a.get("bbox")
+            if c == "ignored":
+                out.append({"text": "xxx", "bbox": b})
+            elif c == "character" and isinstance(b, list) and len(b) == 4:
+                cx, cy = b[0] + b[2] / 2, b[1] + b[3] / 2
+                if not any(w[0] <= cx <= w[2] and w[1] <= cy <= w[3] for w in wboxes):
+                    out.append({"text": a.get("text") or "", "bbox": b})
+        jobs.append({"img": p, "label": "", "ann": out, "size": [im["width"], im["height"]], "split": "train",
+                     "set": "wild", "category": im.get("type", "").replace(" ", "_"), "subclass": ""})
+    return jobs, drops
+
+
 def collect(root: Path) -> tuple[list[dict], collections.Counter]:
     data_roots = sorted(root.glob("*/01.데이터"))
     if not data_roots:
@@ -208,6 +249,8 @@ def _fits(c, boxes, sc, a):
             continue
         if not contains(c, o):
             return None
+        if a.min_inner_text_px and min(o[2] - o[0], o[3] - o[1]) * sc < a.min_inner_text_px:
+            return None  # labeled text too small to draw at this resolution would teach a caption it cannot follow
         inside.append(j)
     return inside
 
@@ -220,7 +263,7 @@ def init(a):
 def work(args) -> dict:
     chunk_id, split, jobs = args
     a, F = _A, _F
-    shard = Path(a.out) / split / f"aihub105-{split}-{chunk_id:05d}.tar"
+    shard = Path(a.out) / split / f"{a.source}-{split}-{chunk_id:05d}.tar"
     shard.parent.mkdir(parents=True, exist_ok=True)
     tmp = shard.with_suffix(".tar.part")
     index, drops = [], collections.Counter()
@@ -235,7 +278,10 @@ def work(args) -> dict:
 
         for job in jobs:
             try:
-                d = json.load(open(job["label"], encoding="utf-8"))
+                if "ann" in job:
+                    d = {"images": [{"width": job["size"][0], "height": job["size"][1]}], "annotations": job["ann"]}
+                else:
+                    d = json.load(open(job["label"], encoding="utf-8"))
                 im = load_image(Path(job["img"]), d)
             except Exception:
                 drops["unreadable_file"] += 1
@@ -263,7 +309,7 @@ def work(args) -> dict:
             if any(F.reason(t) for t in texts):
                 drops["unseen"] += 1
                 continue
-            base = {"source": "aihub-105", "split": split, "set": job["set"], "category": job["category"],
+            base = {"source": a.source.replace("aihub", "aihub-"), "split": split, "set": job["set"], "category": job["category"],
                     "subclass": job["subclass"], "src_stem": Path(job["img"]).stem, "src_size": [W, H],
                     "md5": job["md5"], "dhash": job["dhash"]}
             stem = f"{job['set']}-{Path(job['img']).stem}"
@@ -316,6 +362,7 @@ def hash_job(job: dict) -> dict:
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--root", required=True, type=Path)
+    ap.add_argument("--dataset", choices=["105", "81"], default="105", help="AI Hub dataset layout of --root")
     ap.add_argument("--out", required=True, type=Path)
     ap.add_argument("--workers", type=int, default=max(1, (os.cpu_count() or 2) - 2))
     ap.add_argument("--per-shard", type=int, default=300, help="source images per shard")
@@ -326,6 +373,8 @@ def main() -> int:
     ap.add_argument("--ignore-text-px", type=float, default=8,
                     help="unreadable text whose short side is below this at --train-res may sit inside a crop")
     ap.add_argument("--crop-max-side", type=int, default=1024)
+    ap.add_argument("--min-inner-text-px", type=float, default=0,
+                    help="reject a crop if any labeled text in it is below this at --train-res (0 = off, as in v1)")
     ap.add_argument("--full-max-side", type=int, default=1600)
     ap.add_argument("--full-check-res", type=int, default=1024,
                     help="highest resolution full scenes are trained at; unreadable text must be illegible there")
@@ -333,8 +382,9 @@ def main() -> int:
     ap.add_argument("--s3", default="", help="s3://private-bucket/prefix to sync shards to (ap-northeast-2)")
     a = ap.parse_args()
     a.root, a.out = a.root.expanduser(), a.out.expanduser()
+    a.source = f"aihub{a.dataset}"
 
-    jobs, drops = collect(a.root)
+    jobs, drops = (collect81 if a.dataset == "81" else collect)(a.root)
     if a.limit:
         jobs = jobs[: a.limit]
     print(f"{len(jobs)} paired images; hashing for duplicates", flush=True)
