@@ -19,12 +19,14 @@ for k in "$@"; do
   # .complete / .untarred markers let a restart skip the download and the untar
   if [ ! -f ".tar/$k.complete" ]; then
     for try in 1 2 3 4 5; do
-      code=$(curl -sS -L -C - -o "$T" -H "apikey:$AIHUB_APIKEY" -w '%{http_code}' "$URL?fileSn=$k" || true)
-      case "$code" in 200|206|416) break ;; esac
+      # AI Hub ignores Range requests, so a partial file can never be resumed: start over each try
+      rm -f "$T"
+      code=$(curl -sS -L -o "$T" -H "apikey:$AIHUB_APIKEY" -w '%{http_code}' "$URL?fileSn=$k" || true)
+      case "$code" in 200) break ;; esac
       echo "try $try: http $code"; sleep 60
     done
     if ! tar --quoting-style=literal -tf "$T" > ".tar/$k.list" 2>/dev/null; then
-      echo "FAILED $k: not a tar (http $code): $(head -c 200 "$T")"; rm -f "$T"; exit 1
+      echo "FAILED $k: not a complete tar (http $code)"; rm -f "$T"; exit 1
     fi
     touch ".tar/$k.complete"
   fi
@@ -35,7 +37,7 @@ for k in "$@"; do
   # join every <name>.partN group listed in this tar, by numeric offset
   sed -n 's/\.part[0-9]*$//p' ".tar/$k.list" | sort -u | while IFS= read -r z; do
     ls -1 "$z".part* | awk -F'.part' '{print $NF"\t"$0}' | sort -n | cut -f2- | tr '\n' '\0' | xargs -0 cat > "$z.joining"
-    python3 -c "import sys,zipfile; zipfile.ZipFile(sys.argv[1]).close()" "$z.joining"
+    case "$z" in *.zip) python3 -c "import sys,zipfile; zipfile.ZipFile(sys.argv[1]).close()" "$z.joining" ;; esac
     mv -f "$z.joining" "$z"
     rm -f "$z".part*
     echo "joined $z $(stat -c %s "$z")"
