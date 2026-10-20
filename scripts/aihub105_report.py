@@ -37,6 +37,7 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", required=True, type=Path)
     ap.add_argument("--name", default="aihub105-pilot")
+    ap.add_argument("--source", default="AI Hub 105 (야외 실제 촬영 한글 이미지), pilot subset", help="source line of the report")
     a = ap.parse_args()
     out = a.out.expanduser()
     rows = [json.loads(ln) for ln in open(out / "index.jsonl", encoding="utf-8")]
@@ -72,7 +73,7 @@ def main() -> int:
     ks_ge = {n: sum(1 for c in KS_SET if syl[c] >= n) for n in (1, 5, 20, 100)}
     stats = {
         "name": a.name,
-        "source": "AI Hub 105 (야외 실제 촬영 한글 이미지), pilot subset",
+        "source": a.source,
         "settings": {k: run[k] for k in ("train_res", "min_text_px", "min_crop", "crop_margin", "ignore_text_px",
                                          "crop_max_side", "full_max_side", "full_check_res")},
         "source_images_kept": len(src_imgs),
