@@ -1,0 +1,179 @@
+{
+ "meta": {
+  "model": "Tongyi-MAI/Z-Image",
+  "steps": 28,
+  "guidance": 4.0,
+  "negative_prompt": "",
+  "cfg_normalization": false,
+  "resolution": 1024,
+  "seeds": [
+   42
+  ],
+  "lang": "ko",
+  "prompts": [
+   "eval/prompts.jsonl"
+  ],
+  "subset": 40,
+  "n_prompts": 40,
+  "n_images": 40,
+  "dtype": "bfloat16",
+  "ocr": "paddleocr",
+  "ocr_sec_per_image": 0.175949627161026,
+  "ocr_load_sec": 6.323428630828857,
+  "generation": {
+   "generated": 0,
+   "sec_per_image": null
+  },
+  "git_commit": "unknown",
+  "packages": {
+   "python": "3.12.3",
+   "torch": "2.11.0+cu128",
+   "diffusers": "0.42.0.dev0",
+   "transformers": "5.20.1",
+   "accelerate": "1.15.0",
+   "easyocr": "1.7.2"
+  },
+  "gpu": "NVIDIA L40S",
+  "host": "gpu-box",
+  "started": "2026-10-20T15:02:40+0000",
+  "wall_sec": 20.911965370178223
+ },
+ "metrics": {
+  "overall": {
+   "n": 40,
+   "cer": 0.3461179980365352,
+   "cer_nospace": 0.35469416612798965,
+   "em": 0.2
+  },
+  "split": {
+   "seen": {
+    "n": 20,
+    "cer": 0.30742424242424243,
+    "cer_nospace": 0.3242189183365654,
+    "em": 0.3
+   },
+   "unseen": {
+    "n": 20,
+    "cer": 0.3848117536488279,
+    "cer_nospace": 0.3851694139194139,
+    "em": 0.1
+   }
+  },
+  "bucket": {
+   "1-2": {
+    "n": 10,
+    "cer": 0.55,
+    "cer_nospace": 0.55,
+    "em": 0.2
+   },
+   "11+": {
+    "n": 10,
+    "cer": 0.2946271148012634,
+    "cer_nospace": 0.33008618832148245,
+    "em": 0.0
+   },
+   "3-5": {
+    "n": 10,
+    "cer": 0.18333333333333332,
+    "cer_nospace": 0.18333333333333332,
+    "em": 0.5
+   },
+   "6-10": {
+    "n": 10,
+    "cer": 0.356511544011544,
+    "cer_nospace": 0.3553571428571428,
+    "em": 0.1
+   }
+  },
+  "scene": {
+   "book_cover": {
+    "n": 8,
+    "cer": 0.3110702614379085,
+    "cer_nospace": 0.3345924908424909,
+    "em": 0.25
+   },
+   "menu": {
+    "n": 8,
+    "cer": 0.4522569444444444,
+    "cer_nospace": 0.4595924908424908,
+    "em": 0.0
+   },
+   "poster": {
+    "n": 8,
+    "cer": 0.38164160401002506,
+    "cer_nospace": 0.3751831501831502,
+    "em": 0.25
+   },
+   "product_label": {
+    "n": 8,
+    "cer": 0.16090527119938886,
+    "cer_nospace": 0.1454831932773109,
+    "em": 0.5
+   },
+   "signboard": {
+    "n": 8,
+    "cer": 0.42471590909090906,
+    "cer_nospace": 0.4586195054945055,
+    "em": 0.0
+   }
+  },
+  "has_unseen_syllable": {
+   "False": {
+    "n": 40,
+    "cer": 0.3461179980365352,
+    "cer_nospace": 0.35469416612798965,
+    "em": 0.2
+   }
+  },
+  "split_bucket": {
+   "seen/1-2": {
+    "n": 5,
+    "cer": 0.5,
+    "cer_nospace": 0.5,
+    "em": 0.4
+   },
+   "seen/11+": {
+    "n": 5,
+    "cer": 0.28929292929292927,
+    "cer_nospace": 0.3302090066795949,
+    "em": 0.0
+   },
+   "seen/3-5": {
+    "n": 5,
+    "cer": 0.16666666666666666,
+    "cer_nospace": 0.16666666666666666,
+    "em": 0.6
+   },
+   "seen/6-10": {
+    "n": 5,
+    "cer": 0.2737373737373737,
+    "cer_nospace": 0.3,
+    "em": 0.2
+   },
+   "unseen/1-2": {
+    "n": 5,
+    "cer": 0.6,
+    "cer_nospace": 0.6,
+    "em": 0.0
+   },
+   "unseen/11+": {
+    "n": 5,
+    "cer": 0.2999613003095975,
+    "cer_nospace": 0.32996336996337,
+    "em": 0.0
+   },
+   "unseen/3-5": {
+    "n": 5,
+    "cer": 0.2,
+    "cer_nospace": 0.2,
+    "em": 0.4
+   },
+   "unseen/6-10": {
+    "n": 5,
+    "cer": 0.4392857142857142,
+    "cer_nospace": 0.4107142857142857,
+    "em": 0.0
+   }
+  }
+ }
+}
