@@ -43,6 +43,7 @@ import sys
 import tarfile
 from pathlib import Path
 
+import numpy as np
 from PIL import Image, ImageOps
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -261,9 +262,18 @@ def crop_windows(boxes, W, H, a):
     position so that it fully contains every readable box it touches and shows no unreadable text that would
     still be legible at --train-res. boxes: list of (xyxy, text|None)."""
     out, seen = [], set()
-    for i, (b, t) in enumerate(boxes):
-        if t is None:
+    arr = (np.array([b for b, _ in boxes], dtype=np.float64).reshape(-1, 4), np.array([t is not None for _, t in boxes]))
+    order = range(len(boxes))
+    covered: set[int] = set()
+    if a.max_crops:
+        # dense layouts (packaging, documents): biggest text first, skip boxes an earlier window already holds
+        order = sorted(order, key=lambda k: -(boxes[k][0][2] - boxes[k][0][0]) * (boxes[k][0][3] - boxes[k][0][1]))
+    for i in order:
+        b, t = boxes[i]
+        if t is None or i in covered:
             continue
+        if a.max_crops and len(out) >= a.max_crops:
+            break
         bw, bh = b[2] - b[0], b[3] - b[1]
         best = None
         for m in (a.crop_margin, 1.15, 1.6, 2.2):
@@ -282,7 +292,7 @@ def crop_windows(boxes, W, H, a):
                 for y0 in ys:
                     for x0 in xs:
                         c = (x0, y0, x0 + w, y0 + h)
-                        inside = _fits(c, boxes, sc, a)
+                        inside = _fits(c, arr, sc, a)
                         if inside is None:
                             continue
                         cand = (len(inside), -abs(m - a.crop_margin), -abs(ar - 1.0), c, inside)
@@ -297,6 +307,8 @@ def crop_windows(boxes, W, H, a):
         if sig in seen:
             continue
         seen.add(sig)
+        if a.max_crops:
+            covered.update(inside)
         out.append((c, inside))
     return out
 
@@ -312,22 +324,24 @@ def _positions(lo, hi, size, limit, steps=5):
     return pts
 
 
-def _fits(c, boxes, sc, a):
-    inside = []
-    for j, (o, ot) in enumerate(boxes):
-        if overlap(c, o) <= 0:
-            continue
-        if ot is None:
-            # unreadable text is allowed only while it is too small to read at the trained resolution
-            if min(o[2] - o[0], o[3] - o[1]) * sc >= a.ignore_text_px:
-                return None
-            continue
-        if not contains(c, o):
-            return None
-        if a.min_inner_text_px and min(o[2] - o[0], o[3] - o[1]) * sc < a.min_inner_text_px:
-            return None  # labeled text too small to draw at this resolution would teach a caption it cannot follow
-        inside.append(j)
-    return inside
+def _fits(c, arr, sc, a):
+    """Vectorised over all boxes: arr = (xyxy float array (n,4), readable bool array (n,))."""
+    B, rd = arr
+    ov = (np.minimum(c[2], B[:, 2]) - np.maximum(c[0], B[:, 0]) > 0) & (np.minimum(c[3], B[:, 3]) - np.maximum(c[1], B[:, 1]) > 0)
+    if not ov.any():
+        return []
+    short = np.minimum(B[:, 2] - B[:, 0], B[:, 3] - B[:, 1]) * sc
+    # unreadable text is allowed only while it is too small to read at the trained resolution
+    if (ov & ~rd & (short >= a.ignore_text_px)).any():
+        return None
+    r = ov & rd
+    tol = 1.0
+    inside = (B[:, 0] >= c[0] - tol) & (B[:, 1] >= c[1] - tol) & (B[:, 2] <= c[2] + tol) & (B[:, 3] <= c[3] + tol)
+    if (r & ~inside).any():
+        return None
+    if a.min_inner_text_px and (r & (short < a.min_inner_text_px)).any():
+        return None  # labeled text too small to draw at this resolution would teach a caption it cannot follow
+    return np.flatnonzero(r).tolist()
 
 
 def init(a):
@@ -449,6 +463,8 @@ def main() -> int:
     ap.add_argument("--ignore-text-px", type=float, default=8,
                     help="unreadable text whose short side is below this at --train-res may sit inside a crop")
     ap.add_argument("--crop-max-side", type=int, default=1024)
+    ap.add_argument("--max-crops", type=int, default=0,
+                    help="cap crops per image and skip boxes an earlier crop holds (0 = off, as in v1)")
     ap.add_argument("--min-inner-text-px", type=float, default=0,
                     help="reject a crop if any labeled text in it is below this at --train-res (0 = off, as in v1)")
     ap.add_argument("--full-max-side", type=int, default=1600)
