@@ -31,6 +31,8 @@ def main() -> int:
     ap.add_argument("--budget-usd", type=float, required=True)
     ap.add_argument("--max-hours", type=float, required=True)
     ap.add_argument("--started", type=float, default=0.0, help="unix time the instance started (default: now)")
+    ap.add_argument("--until", default="", help="Capacity Block end, UTC ISO (e.g. 2026-11-03T11:30:00Z). EC2 starts "
+                    "terminating 30 min before it, so the guard stops the trainer at end - 30 min - grace - 10 min")
     ap.add_argument("--grace-min", type=float, default=20)
     ap.add_argument("--every-sec", type=int, default=60)
     ap.add_argument("--log", required=True)
@@ -38,6 +40,11 @@ def main() -> int:
     a = ap.parse_args()
     t0 = a.started or time.time()
     limit_h = min(a.max_hours, a.budget_usd / a.usd_per_hour)
+    if a.until:
+        import calendar
+
+        end = calendar.timegm(time.strptime(a.until.replace("Z", ""), "%Y-%m-%dT%H:%M:%S"))
+        limit_h = min(limit_h, (end - (30 + a.grace_min + 10) * 60 - t0) / 3600)
     with open(os.path.expanduser(a.log), "a", encoding="utf-8") as log:
         def note(msg):
             log.write(f"{time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())} {msg}\n")

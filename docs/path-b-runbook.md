@@ -64,11 +64,19 @@ If the measured rate is under 3 samples/s/GPU, cut the 512 epoch to the AI Hub +
    setsid nohup ~/venv/bin/torchrun --nproc-per-node 8 scripts/train_full.py --config configs/p5.yaml \
        --run-dir /opt/dlami/nvme/runs/pathb-v1 > /opt/dlami/nvme/runs/pathb-v1.log 2>&1 &
    setsid nohup ~/venv/bin/python infra/cost_guard.py --pid <torchrun pid> --usd-per-hour 31 \
-       --budget-usd <approved budget> --max-hours <block hours - 1> --log /opt/dlami/nvme/runs/cost_guard.log &
+       --budget-usd <approved budget> --max-hours <block hours> --until <block end, UTC ISO> \
+       --log /opt/dlami/nvme/runs/cost_guard.log &
    ```
 4. Watch `log.jsonl` (loss, samples/s, memory). Checkpoints every 30 min go to `s3://<bucket>/runs/pathb-v1/ckpt`.
 5. Interruption or block end: the trainer checkpoints on SIGTERM; re-run the same command on a new node to resume
    (same world size, 8).
+   - EC2 sends an EventBridge event 40 min before the block ends and starts terminating 30 min before it. With
+     `--until`, the guard SIGTERMs the trainer at end - 30 - grace - 10 min, so the last checkpoint is in S3 before
+     the node goes. At most the work since that checkpoint is lost.
+   - Not done yet: extend the block from the console while it runs (payment must clear 35 min before the end), or
+     buy the next block, or resume on on-demand p5 / g7e.48xlarge (both 8 GPUs, same world size). The data is
+     pre-computed in S3, so a new node is training again within the sync time.
+   - Size the block from the samples/s measured in the first 30 min, plus about 20% margin.
 6. Export: `torchrun --nproc-per-node 1 scripts/train_full.py --config configs/p5.yaml --run-dir ... --export <dir>`,
    then `aws s3 sync <dir> s3://<bucket>/models/zimage-ko-base-v1`.
 7. Evaluate on a g6e (not on p5): `scripts/eval_baseline.py --model <exported pipeline dir> --steps 28 --guidance 4`.
