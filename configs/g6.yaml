@@ -1,0 +1,32 @@
+# Pilot LoRA on g6.4xlarge (L4 24 GB, 64 GiB RAM). g6.xlarge (16 GiB RAM) is too small to load the model.
+# Same data and schedule as g6e.yaml with smaller batches; the bf16 DiT alone is 12.3 GB.
+model: Tongyi-MAI/Z-Image
+precomp: ~/data/precomp
+s3: ""
+seed: 0
+mix:
+  aihub105: 20000
+  synth: 20000
+variants: [ko_long, ko_short, en]
+caption_dropout: 0.1
+gradient_checkpointing: true
+lora:
+  rank: 32
+  alpha: 32
+  targets: [to_q, to_k, to_v, to_out.0]
+optim:
+  lr: 1.0e-4
+  warmup: 100
+  max_grad_norm: 1.0
+stages:
+  - {res: 512, batch: 2, epochs: 2}
+  - {res: 1024, batch: 1, steps: 3000}
+ckpt_minutes: 30
+eval:
+  every: 10000
+  prompts: [eval/prompts.jsonl]
+  subset: 40
+  seeds: [42]
+  resolution: 1024
+  steps: 28
+  guidance: 4.0

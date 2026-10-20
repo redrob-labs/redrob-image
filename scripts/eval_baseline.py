@@ -84,6 +84,10 @@ def generate(a, rows, img_dir: Path) -> dict:
         return info
     t0 = time.time()
     pipe = ZImagePipeline.from_pretrained(a.model, torch_dtype=torch.bfloat16, low_cpu_mem_usage=False).to("cuda")
+    if a.lora:
+        # a LoRA trained on Base can be applied to any Z-Image transformer (Base, Turbo, our own)
+        pipe.load_lora_weights(a.lora, adapter_name="ko")
+        pipe.set_adapters(["ko"], adapter_weights=[a.lora_scale])
     info["load_sec"] = time.time() - t0
     kw = dict(height=a.resolution, width=a.resolution, num_inference_steps=a.steps, guidance_scale=a.guidance)
     if a.guidance > 0:
@@ -153,6 +157,8 @@ def main() -> None:
     ap.add_argument("--ocr", default="paddleocr")
     ap.add_argument("--review-frac", type=float, default=0.2)
     ap.add_argument("--out", required=True)
+    ap.add_argument("--lora", default="", help="LoRA .safetensors (or dir) to load into the pipeline")
+    ap.add_argument("--lora-scale", type=float, default=1.0)
     a = ap.parse_args()
 
     out = Path(a.out)
