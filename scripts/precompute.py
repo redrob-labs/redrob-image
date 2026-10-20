@@ -149,6 +149,7 @@ def main() -> int:
     ap.add_argument("--vae-batch", type=int, default=8)
     ap.add_argument("--txt-batch", type=int, default=32)
     ap.add_argument("--max-shards", type=int, default=0, help="per source, for a speed test")
+    ap.add_argument("--max-per-source", type=int, default=0, help="stop a source once this many samples are cached")
     a = ap.parse_args()
     out = a.out.expanduser() / str(a.res)
     out.mkdir(parents=True, exist_ok=True)
@@ -175,11 +176,19 @@ def main() -> int:
         save_file({"txt": enc.text([""])[0].contiguous()}, str(empty))
 
     speed = {"res": a.res, "shards": 0, "samples": 0, "bytes": 0, "seconds": 0.0}
+    per_src: dict = {}
+    for js in out.glob("*.json"):  # samples already cached, so --max-per-source holds across resumes
+        if js.name != "speed.json":
+            src = js.name.split("-", 1)[0]
+            per_src[src] = per_src.get(src, 0) + len(json.loads(js.read_text(encoding="utf-8")))
     for src, tar, caps in jobs:
         if (out / f"{src}-{tar.stem}.safetensors").exists():
             continue
+        if a.max_per_source and per_src.get(src, 0) >= a.max_per_source:
+            continue
         t0 = time.time()
         n, nbytes = run_shard(enc, src, tar, caps, out, a.res, a.vae_batch, a.txt_batch)
+        per_src[src] = per_src.get(src, 0) + n
         dt = time.time() - t0
         speed.update(shards=speed["shards"] + 1, samples=speed["samples"] + n, bytes=speed["bytes"] + nbytes,
                      seconds=round(speed["seconds"] + dt, 1))
