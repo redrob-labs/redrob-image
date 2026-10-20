@@ -121,8 +121,11 @@ class StableVal:
         self.cfg = cfg
         d = Path(os.path.expanduser(cfg["precomp"])) / str(cfg.get("res", 512))
         rows = [json.loads(ln) for ln in open(d / "index.jsonl", encoding="utf-8")]
-        n = cfg.get("max_samples", 0)
-        self.rows = sorted(rows, key=lambda r: (r["source"], r["file"], r["i"]))[: n or None]
+        k = cfg.get("max_per_source", 0)  # a forward pass per sample x level: 512 samples took ~12 min on an L40S
+        by = defaultdict(list)
+        for r in sorted(rows, key=lambda r: (r["source"], r["file"], r["i"])):
+            by[r["source"]].append(r)
+        self.rows = [r for s in sorted(by) for r in by[s][: k or None]]
         self.dir, self.h = d, {}
         self.levels = cfg.get("levels", 8)
         self.variant = cfg.get("variant", "ko_long")
@@ -162,10 +165,11 @@ class StableVal:
 
 def log_val(run: Path, sv: StableVal, transformer, step: int):
     t0 = time.time()
-    if not (run / "val_base.json").exists():
+    base_f = run / f"val_base-n{len(sv.rows)}.json"  # one per held-out set size, so a resized set gets its own base
+    if not base_f.exists():
         with _adapters_off(transformer):
             base = sv(transformer)
-        (run / "val_base.json").write_text(json.dumps(base, indent=2), encoding="utf-8")
+        base_f.write_text(json.dumps(base, indent=2), encoding="utf-8")
         print(f"val base (no LoRA): {base['val_loss']}", flush=True)
     rec = {"step": step} | sv(transformer) | {"seconds": round(time.time() - t0, 1)}
     with open(run / "val.jsonl", "a", encoding="utf-8") as f:

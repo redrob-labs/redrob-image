@@ -25,7 +25,8 @@ ckpt_minutes: 30
 val:                             # stable validation loss on held-out data (scripts/train_lora.py StableVal)
   precomp: ~/data/precomp-val    # AI Hub 81 (never trained on) + synth seed 99, scripts/precompute.py output
   res: 512
-  every: 500
+  every: 1000
+  max_per_source: 128            # 256 samples x 8 levels, ~6 min per check on an L40S
   levels: 8                      # t = 1/16, 3/16, ..., 15/16
   seed: 1234
   variant: ko_long
