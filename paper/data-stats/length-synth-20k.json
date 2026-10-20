@@ -1,0 +1,47 @@
+{
+ "name": "synth-20k",
+ "res": 512,
+ "samples": 20000,
+ "buckets": {
+  "1-2": {
+   "blocks": 5237,
+   "samples_with_only_this": 0,
+   "short_side_px_p10": 19.0,
+   "short_side_px_p50": 37.8,
+   "short_side_px_p90": 93.4,
+   "area_share_p50": 0.0151
+  },
+  "3-5": {
+   "blocks": 22417,
+   "samples_with_only_this": 278,
+   "short_side_px_p10": 20.4,
+   "short_side_px_p50": 45.1,
+   "short_side_px_p90": 83.3,
+   "area_share_p50": 0.0328
+  },
+  "6-10": {
+   "blocks": 21431,
+   "samples_with_only_this": 79,
+   "short_side_px_p10": 19.1,
+   "short_side_px_p50": 33.9,
+   "short_side_px_p90": 64.8,
+   "area_share_p50": 0.0267
+  },
+  "11+": {
+   "blocks": 11976,
+   "samples_with_only_this": 0,
+   "short_side_px_p10": 16.2,
+   "short_side_px_p50": 40.4,
+   "short_side_px_p90": 142.0,
+   "area_share_p50": 0.0351
+  },
+  "0": {
+   "blocks": 4688,
+   "samples_with_only_this": 0,
+   "short_side_px_p10": 13.7,
+   "short_side_px_p50": 23.1,
+   "short_side_px_p90": 39.9,
+   "area_share_p50": 0.0096
+  }
+ }
+}
