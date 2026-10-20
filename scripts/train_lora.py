@@ -290,6 +290,10 @@ def main() -> int:
     cfg = yaml.safe_load(open(a.config, encoding="utf-8"))
     if a.rank:
         cfg["lora"]["rank"] = cfg["lora"]["alpha"] = a.rank
+        # a rank can carry its own target list (configs/*.yaml lora.rank_targets), so one chain runs an ablation
+        rt = (cfg["lora"].get("rank_targets") or {}).get(a.rank) or (cfg["lora"].get("rank_targets") or {}).get(str(a.rank))
+        if rt:
+            cfg["lora"]["targets"] = rt
     run = a.run.expanduser()
     run.mkdir(parents=True, exist_ok=True)
     precomp = Path(os.path.expanduser(cfg["precomp"]))
