@@ -107,6 +107,44 @@ class Encoders:
         return [h[i][mask[i]].to(t.bfloat16).cpu() for i in range(len(prompts))]
 
 
+def text_boxes(meta: dict) -> list[tuple[float, float, float, float]]:
+    """Text block boxes (x0, y0, x1, y1) in the stored image's pixels: parser shards carry bbox_xyxy, synth shards
+    a polygon."""
+    out = []
+    for b in meta.get("text_blocks") or []:
+        if "bbox_xyxy" in b:
+            out.append(tuple(float(v) for v in b["bbox_xyxy"]))
+        elif b.get("polygon"):
+            xs, ys = [p[0] for p in b["polygon"]], [p[1] for p in b["polygon"]]
+            out.append((min(xs), min(ys), max(xs), max(ys)))
+    return out
+
+
+def fit_boxes(boxes, w: int, h: int, bw: int, bh: int):
+    """The same cover-resize + centre-crop as fit(), applied to boxes; drops boxes that end up outside."""
+    s = max(bw / w, bh / h)
+    nw, nh = max(bw, round(w * s)), max(bh, round(h * s))
+    ox, oy = (nw - bw) // 2, (nh - bh) // 2
+    out = []
+    for x0, y0, x1, y1 in boxes:
+        x0, x1 = max(0.0, x0 * s - ox), min(float(bw), x1 * s - ox)
+        y0, y1 = max(0.0, y0 * s - oy), min(float(bh), y1 * s - oy)
+        if x1 > x0 and y1 > y0:
+            out.append((x0, y0, x1, y1))
+    return out
+
+
+def text_mask(boxes, bw: int, bh: int, f: int = 8):
+    """uint8 (bh/f, bw/f) latent-grid mask, 1 on every latent cell a text box touches (the trainer up-weights the
+    loss there)."""
+    import torch
+
+    m = torch.zeros(bh // f, bw // f, dtype=torch.uint8)
+    for x0, y0, x1, y1 in boxes:
+        m[int(y0 // f): int(math.ceil(y1 / f)), int(x0 // f): int(math.ceil(x1 / f))] = 1
+    return m
+
+
 def run_shard(enc: Encoders, src: str, tar: Path, captions, out_dir: Path, res: int, vae_batch: int, txt_batch: int):
     from safetensors.torch import save_file
 
@@ -116,8 +154,12 @@ def run_shard(enc: Encoders, src: str, tar: Path, captions, out_dir: Path, res: 
     for key, meta, img, caps in samples(tar, captions):
         b = nearest(img.width, img.height, bks)
         i = len(rows)
+        fb = fit_boxes(text_boxes(meta), img.width, img.height, *b)
+        tensors[f"{i}.mask"] = text_mask(fb, *b).contiguous()
         rows.append({"i": i, "key": key, "source": src, "shard": tar.name, "bucket": list(b),
-                     "kind": meta.get("kind", meta.get("scene", "")), "variants": list(caps)})
+                     "kind": meta.get("kind", meta.get("scene", "")), "variants": list(caps),
+                     # smallest text short side in trained pixels; the trainer can keep small text out of low-res stages
+                     "min_text_px": round(min((min(x1 - x0, y1 - y0) for x0, y0, x1, y1 in fb), default=0.0), 1)})
         by_bucket[b].append((i, fit(img, *b), caps))
     for b, items in by_bucket.items():
         for s in range(0, len(items), vae_batch):

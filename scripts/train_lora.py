@@ -57,9 +57,14 @@ def git_commit() -> str:
 class Data:
     """Batches of one bucket from <precomp>/<res>/index.jsonl, deterministic per (seed, epoch)."""
 
-    def __init__(self, precomp: Path, res: int, mix: dict, batch: int, seed: int, variants: list[str]):
+    def __init__(self, precomp: Path, res: int, mix: dict, batch: int, seed: int, variants: list[str],
+                 min_text_px: float = 0):
         self.dir = precomp / str(res)
         rows = [json.loads(ln) for ln in open(self.dir / "index.jsonl", encoding="utf-8")]
+        if min_text_px:  # small text goes to the higher-resolution stage only; rows without the field are kept
+            n0 = len(rows)
+            rows = [r for r in rows if not r.get("min_text_px") or r["min_text_px"] >= min_text_px]
+            print(f"{res}px: {n0 - len(rows)} rows with text under {min_text_px}px left out", flush=True)
         rng = random.Random(seed)
         by_src = defaultdict(list)
         for r in rows:
@@ -97,13 +102,14 @@ class Data:
         return self.handles[name]
 
     def load(self, batch: list[dict], rng: random.Random):
-        lats, txts = [], []
+        lats, txts, masks = [], [], []
         for r in batch:
             h = self._open(r["file"])
             lats.append(h.get_tensor(f"{r['i']}.lat"))
             vs = [v for v in self.variants if v in r["variants"]] or r["variants"]
             txts.append(h.get_tensor(f"{r['i']}.txt.{rng.choice(vs)}"))
-        return lats, txts
+            masks.append(h.get_tensor(f"{r['i']}.mask") if f"{r['i']}.mask" in h.keys() else None)
+        return lats, txts, masks
 
 
 def lora_targets(cfg: dict) -> list[str]:
@@ -353,6 +359,8 @@ def main() -> int:
     last_ckpt = time.time()
     t_start, samples_seen, tokens_seen = time.time(), 0, 0
     ev = cfg.get("eval", {})
+    loss_cfg = cfg.get("loss") or {}
+    ts_cfg = cfg.get("timesteps") or {}
     vc = cfg.get("val") or {}
     sv = None
     if vc.get("every") and (Path(os.path.expanduser(vc["precomp"])) / str(vc.get("res", 512)) / "index.jsonl").exists():
@@ -366,7 +374,8 @@ def main() -> int:
 
     for si in range(state["stage"], len(cfg["stages"])):
         st = cfg["stages"][si]
-        data = Data(precomp, st["res"], cfg["mix"], st["batch"], seed + si, cfg.get("variants", ["ko_long", "ko_short", "en"]))
+        data = Data(precomp, st["res"], cfg["mix"], st["batch"], seed + si, cfg.get("variants", ["ko_long", "ko_short", "en"]),
+                    st.get("min_text_px", 0))
         epochs = st.get("epochs", 1)
         stage_steps_cap = st.get("steps", 0)
         if state["stage"] != si or (state["epoch"] == 0 and state["batch"] == 0 and "stage_start" not in state):
@@ -377,12 +386,17 @@ def main() -> int:
             batches = data.epoch_batches(ep)
             start_b = state["batch"] if (state["stage"] == si and state["epoch"] == ep) else 0
             for bi in range(start_b, len(batches)):
-                lats, txts = data.load(batches[bi], rng)
+                lats, txts, masks = data.load(batches[bi], rng)
                 x0 = torch.stack(lats).to("cuda", torch.float32)
                 prompts = [(empty if rng.random() < cfg.get("caption_dropout", 0.1) else t.to("cuda")) for t in txts]
                 noise = torch.randn_like(x0)
-                idx = torch.randint(0, n_train, (x0.shape[0],))
-                sig = sigmas_all[idx.to("cuda")].view(-1, 1, 1, 1)
+                if ts_cfg.get("dist") == "logit_normal":
+                    # SD3 logit-normal over sigma in (0, 1); more steps at mid/low noise, where strokes are learned
+                    u = torch.randn(x0.shape[0], device="cuda") * ts_cfg.get("std", 1.0) + ts_cfg.get("mean", 0.0)
+                    sig = torch.sigmoid(u).clamp(1e-3, 1 - 1e-3).view(-1, 1, 1, 1)
+                else:
+                    idx = torch.randint(0, n_train, (x0.shape[0],))
+                    sig = sigmas_all[idx.to("cuda")].view(-1, 1, 1, 1)
                 xt = (1 - sig) * x0 + sig * noise
                 tnorm = (1 - sig.view(-1))  # == (1000 - timestep) / 1000 for this scheduler
                 lr = base_lr * min(1.0, (state["step"] + 1) / max(warmup, 1))
@@ -392,7 +406,13 @@ def main() -> int:
                     out = transformer(list(xt.to(torch.bfloat16).unsqueeze(2).unbind(0)), tnorm.to(torch.bfloat16),
                                       prompts, return_dict=False)[0]
                 pred = -torch.stack(out, 0).squeeze(2).float()
-                loss = ((pred - (noise - x0)) ** 2).mean()
+                err = (pred - (noise - x0)) ** 2
+                tw = loss_cfg.get("text_weight", 1.0)
+                if tw != 1.0 and all(m is not None for m in masks):
+                    w = 1.0 + (tw - 1.0) * torch.stack(masks).to("cuda", torch.float32).unsqueeze(1)
+                    loss = (err * w).mean() / w.mean()  # same scale as the plain mean, text cells count tw times
+                else:
+                    loss = err.mean()
                 if not torch.isfinite(loss):
                     raise RuntimeError(f"non-finite loss at step {state['step']}")
                 loss.backward()
