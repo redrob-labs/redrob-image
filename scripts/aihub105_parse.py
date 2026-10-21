@@ -210,6 +210,47 @@ def collect71553(root: Path) -> tuple[list[dict], collections.Counter]:
     return jobs, drops
 
 
+def collect71725(root: Path) -> tuple[list[dict], collections.Counter]:
+    """AI Hub 71725 tourism image-text pairs: one JSON per source image, with source_image.ocr = list of
+    [polygon-json-string, text] over the source_image (the processed PNG under 01.원천데이터). Every text region
+    is labeled, so there is no unlabeled text; posters/표 only (지도·티켓 subsets are not downloaded)."""
+    files = {}
+    for dp, _, fs in os.walk(root / "extracted"):
+        for f in fs:
+            if Path(f).suffix.lower() in IMG_EXT:
+                files[f] = os.path.join(dp, f)
+    jobs, drops = [], collections.Counter()
+    for dp, _, fs in os.walk(root / "extracted"):
+        if "라벨" not in dp:
+            continue
+        for f in fs:
+            if not f.endswith(".json"):
+                continue
+            try:
+                d = json.load(open(os.path.join(dp, f), encoding="utf-8"))
+            except Exception:
+                drops["unreadable_label"] += 1
+                continue
+            si = d.get("source_image") or {}
+            p = files.get(si.get("name") or "")
+            if p is None:
+                drops["image_not_downloaded"] += 1
+                continue
+            out = []
+            for poly_s, text in si.get("ocr") or []:
+                try:
+                    pts = json.loads(poly_s)
+                    xs, ys = [pt["x"] for pt in pts], [pt["y"] for pt in pts]
+                    out.append({"text": text or "", "bbox": [min(xs), min(ys), max(xs) - min(xs), max(ys) - min(ys)]})
+                except Exception:
+                    out.append({"text": text or "", "bbox": None})
+            jobs.append({"img": p, "label": "", "ann": out, "size": [si.get("width", 0), si.get("height", 0)],
+                         "split": "val" if "/Validation/" in dp else "train", "set": "tour",
+                         "category": (si.get("sub_category") or "").replace(" ", "_"),
+                         "subclass": (si.get("main_category") or "")})
+    return jobs, drops
+
+
 def collect_nvidia(root: Path) -> tuple[list[dict], collections.Counter]:
     """nvidia/OCR-Synthetic-Multilingual-v1 HDF5 files (CC BY 4.0). Every rendered line is labeled, so line
     boxes become text blocks and full pages are clean. Images stay inside the .h5; jobs point at (file, index)."""
@@ -513,7 +554,7 @@ def hash_job(job: dict) -> dict:
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--root", required=True, type=Path)
-    ap.add_argument("--dataset", choices=["105", "81", "633", "71553", "nvidia"], default="105", help="dataset layout of --root")
+    ap.add_argument("--dataset", choices=["105", "81", "633", "71553", "71725", "nvidia"], default="105", help="dataset layout of --root")
     ap.add_argument("--out", required=True, type=Path)
     ap.add_argument("--workers", type=int, default=max(1, (os.cpu_count() or 2) - 2))
     ap.add_argument("--per-shard", type=int, default=300, help="source images per shard")
@@ -535,10 +576,11 @@ def main() -> int:
     ap.add_argument("--s3", default="", help="s3://private-bucket/prefix to sync shards to (ap-northeast-2)")
     a = ap.parse_args()
     a.root, a.out = a.root.expanduser(), a.out.expanduser()
-    a.source = {"105": "aihub105", "81": "aihub81", "633": "aihub633", "71553": "aihub71553", "nvidia": "nvidia_ocr_ko"}[a.dataset]
+    a.source = {"105": "aihub105", "81": "aihub81", "633": "aihub633", "71553": "aihub71553", "71725": "aihub71725",
+                   "nvidia": "nvidia_ocr_ko"}[a.dataset]
 
     jobs, drops = {"105": collect, "81": collect81, "633": collect633, "71553": collect71553,
-                   "nvidia": collect_nvidia}[a.dataset](a.root)
+                   "71725": collect71725, "nvidia": collect_nvidia}[a.dataset](a.root)
     if a.limit:
         jobs = jobs[: a.limit]
     print(f"{len(jobs)} paired images; hashing for duplicates", flush=True)
