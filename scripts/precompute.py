@@ -145,17 +145,23 @@ def text_mask(boxes, bw: int, bh: int, f: int = 8):
     return m
 
 
-def run_shard(enc: Encoders, src: str, tar: Path, captions, out_dir: Path, res: int, vae_batch: int, txt_batch: int):
+def run_shard(enc: Encoders, src: str, tar: Path, captions, out_dir: Path, res: int, vae_batch: int, txt_batch: int,
+              glyph: bool = False):
     from safetensors.torch import save_file
+
+    import glyph as G
 
     bks = buckets(res)
     rows, tensors = [], {}
     by_bucket = defaultdict(list)
+    glyphs = {}
     for key, meta, img, caps in samples(tar, captions):
         b = nearest(img.width, img.height, bks)
         i = len(rows)
         fb = fit_boxes(text_boxes(meta), img.width, img.height, *b)
         tensors[f"{i}.mask"] = text_mask(fb, *b).contiguous()
+        if glyph:  # drawn at the stored image's size, then the same cover-resize + crop as the photo
+            glyphs[i] = fit(G.render(meta.get("text_blocks") or [], img.width, img.height), *b)
         rows.append({"i": i, "key": key, "source": src, "shard": tar.name, "bucket": list(b),
                      "kind": meta.get("kind", meta.get("scene", "")), "variants": list(caps),
                      # smallest text short side in trained pixels; the trainer can keep small text out of low-res stages
@@ -166,11 +172,17 @@ def run_shard(enc: Encoders, src: str, tar: Path, captions, out_dir: Path, res: 
             chunk = items[s: s + vae_batch]
             for (i, _, _), z in zip(chunk, enc.latents([im for _, im, _ in chunk])):
                 tensors[f"{i}.lat"] = z.contiguous()
+            if glyph:
+                for (i, _, _), z in zip(chunk, enc.latents([glyphs[i] for i, _, _ in chunk])):
+                    tensors[f"{i}.glyph"] = z.contiguous()
     texts = [(i, v, c) for b in by_bucket.values() for i, _, caps in b for v, c in caps.items()]
     for s in range(0, len(texts), txt_batch):
         chunk = texts[s: s + txt_batch]
         for (i, v, _), e in zip(chunk, enc.text([c for _, _, c in chunk])):
             tensors[f"{i}.txt.{v}"] = e.contiguous()
+        if glyph:  # omni middle caption segment, for batches that carry the glyph condition
+            for (i, v, _), e in zip(chunk, G.encode_raw(enc.tok, enc.te, [G.SEG1.format(c) for _, _, c in chunk])):
+                tensors[f"{i}.otxt.{v}"] = e.contiguous()
     name = f"{src}-{tar.stem}"
     tmp = out_dir / f"{name}.safetensors.part"
     save_file(tensors, str(tmp))
@@ -192,6 +204,9 @@ def main() -> int:
     ap.add_argument("--txt-batch", type=int, default=32)
     ap.add_argument("--max-shards", type=int, default=0, help="per source, for a speed test")
     ap.add_argument("--max-per-source", type=int, default=0, help="stop a source once this many samples are cached")
+    ap.add_argument("--glyph", action="store_true",
+                    help="also cache <i>.glyph (glyph-map latent, scripts/glyph.py) and <i>.otxt.<variant> (omni caption "
+                         "segment), plus <out>/omni.safetensors with the fixed segments")
     a = ap.parse_args()
     out = a.out.expanduser() / str(a.res)
     out.mkdir(parents=True, exist_ok=True)
@@ -217,6 +232,12 @@ def main() -> int:
     empty = a.out.expanduser() / "empty.safetensors"
     if not empty.exists():
         save_file({"txt": enc.text([""])[0].contiguous()}, str(empty))
+    omni_f = a.out.expanduser() / "omni.safetensors"
+    if a.glyph and not omni_f.exists():
+        import glyph as G
+
+        seg0, (seg1_empty,), seg2 = G.segments(enc.tok, enc.te, [""])
+        save_file({"seg0": seg0.contiguous(), "seg2": seg2.contiguous(), "empty": seg1_empty.contiguous()}, str(omni_f))
 
     speed = {"res": a.res, "shards": 0, "samples": 0, "bytes": 0, "seconds": 0.0}
     per_src: dict = {}
@@ -230,7 +251,7 @@ def main() -> int:
         if a.max_per_source and per_src.get(src, 0) >= a.max_per_source:
             continue
         t0 = time.time()
-        n, nbytes = run_shard(enc, src, tar, caps, out, a.res, a.vae_batch, a.txt_batch)
+        n, nbytes = run_shard(enc, src, tar, caps, out, a.res, a.vae_batch, a.txt_batch, a.glyph)
         per_src[src] = per_src.get(src, 0) + n
         dt = time.time() - t0
         speed.update(shards=speed["shards"] + 1, samples=speed["samples"] + n, bytes=speed["bytes"] + nbytes,

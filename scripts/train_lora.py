@@ -102,14 +102,21 @@ class Data:
         return self.handles[name]
 
     def load(self, batch: list[dict], rng: random.Random):
-        lats, txts, masks = [], [], []
+        """Latents, caption embeddings, text masks, and (when cached) glyph latents + omni caption segments for
+        the same caption variant; glyph entries are None when the shard has none."""
+        lats, txts, masks, glyphs, otxts = [], [], [], [], []
         for r in batch:
             h = self._open(r["file"])
+            keys = h.keys()
             lats.append(h.get_tensor(f"{r['i']}.lat"))
             vs = [v for v in self.variants if v in r["variants"]] or r["variants"]
-            txts.append(h.get_tensor(f"{r['i']}.txt.{rng.choice(vs)}"))
-            masks.append(h.get_tensor(f"{r['i']}.mask") if f"{r['i']}.mask" in h.keys() else None)
-        return lats, txts, masks
+            v = rng.choice(vs)
+            txts.append(h.get_tensor(f"{r['i']}.txt.{v}"))
+            masks.append(h.get_tensor(f"{r['i']}.mask") if f"{r['i']}.mask" in keys else None)
+            g = f"{r['i']}.glyph"
+            glyphs.append(h.get_tensor(g) if g in keys else None)
+            otxts.append(h.get_tensor(f"{r['i']}.otxt.{v}") if g in keys else None)
+        return lats, txts, masks, glyphs, otxts
 
 
 def lora_targets(cfg: dict) -> list[str]:
@@ -136,6 +143,12 @@ class StableVal:
         self.levels = cfg.get("levels", 8)
         self.variant = cfg.get("variant", "ko_long")
         self._open = lambda f: self.h.setdefault(f, safe_open(str(d / f), framework="pt"))
+        # glyph runs score with the glyph condition on (the val set must be pre-computed with --glyph)
+        self.omni = None
+        if cfg.get("glyph"):
+            from safetensors.torch import load_file
+
+            self.omni = {k: v.to("cuda") for k, v in load_file(str(d.parent / "omni.safetensors")).items()}
 
     def __call__(self, transformer) -> dict:
         import torch
@@ -154,8 +167,16 @@ class StableVal:
                 g = torch.Generator("cuda").manual_seed(self.cfg.get("seed", 1234) + j)
                 noise = torch.randn(x0.shape, generator=g, device="cuda")
                 xt = (1 - sig) * x0 + sig * noise
-                out = transformer(list(xt.to(torch.bfloat16).unsqueeze(2).unbind(0)), (1 - sig.view(-1)).to(torch.bfloat16),
-                                  [txt] * L, return_dict=False)[0]
+                xs = list(xt.to(torch.bfloat16).unsqueeze(2).unbind(0))
+                tt = (1 - sig.view(-1)).to(torch.bfloat16)
+                if self.omni:
+                    import glyph as G
+
+                    gl = h.get_tensor(f"{r['i']}.glyph").to("cuda", torch.bfloat16).unsqueeze(1)
+                    ot = h.get_tensor(f"{r['i']}.otxt.{v}").to("cuda")
+                    out = G.omni(transformer, xs, tt, [ot] * L, [gl] * L, self.omni["seg0"], self.omni["seg2"])
+                else:
+                    out = transformer(xs, tt, [txt] * L, return_dict=False)[0]
                 pred = -torch.stack(out, 0).squeeze(2).float()
                 lv = ((pred - (noise - x0)) ** 2).mean(dim=(1, 2, 3)).cpu()
                 per_lvl += lv
@@ -266,6 +287,11 @@ def run_eval(cfg: dict, transformer, out_dir: Path, model: str):
                           text_encoder=te, tokenizer=AutoTokenizer.from_pretrained(model, subfolder="tokenizer"),
                           transformer=transformer)
     res = cfg.get("resolution", 1024)
+    use_glyph = bool(cfg.get("glyph"))
+    if use_glyph:
+        import glyph as G
+
+        (out_dir / "glyphs").mkdir(parents=True, exist_ok=True)
     t0 = time.time()
     with torch.autocast("cuda", dtype=torch.bfloat16):
         for r in rows:
@@ -273,11 +299,16 @@ def run_eval(cfg: dict, transformer, out_dir: Path, model: str):
                 p = img_dir / f"{r['id']}_s{s}.png"
                 if p.exists():
                     continue
-                img = pipe(prompt=r["prompt_ko"], height=res, width=res, num_inference_steps=cfg.get("steps", 28),
-                           guidance_scale=cfg.get("guidance", 4.0), negative_prompt="",
-                           generator=torch.Generator("cuda").manual_seed(s)).images[0]
+                kw = dict(num_inference_steps=cfg.get("steps", 28), guidance_scale=cfg.get("guidance", 4.0),
+                          generator=torch.Generator("cuda").manual_seed(s))
+                if use_glyph:
+                    img, g = G.generate(pipe, r["prompt_ko"], r["target_text"], r.get("scene", ""), res, **kw)
+                    g.save(out_dir / "glyphs" / f"{r['id']}.png")
+                else:
+                    img = pipe(prompt=r["prompt_ko"], height=res, width=res, negative_prompt="", **kw).images[0]
                 img.save(p)
     (out_dir / "eval_meta.json").write_text(json.dumps({"model": model, "lora": "in-training", "resolution": res,
+                                                        "glyph": use_glyph,
                                                         "steps": cfg.get("steps", 28), "guidance": cfg.get("guidance", 4.0),
                                                         "prompts": len(rows), "seconds": round(time.time() - t0, 1)}), encoding="utf-8")
     del pipe, te
@@ -334,6 +365,14 @@ def main() -> int:
     sigmas_all = sched.sigmas.to("cuda", torch.float32)
     n_train = sched.config.num_train_timesteps
     empty = load_file(str(precomp / "empty.safetensors"))["txt"].to("cuda")
+    import glyph as G
+
+    gcfg = cfg.get("glyph") or {}
+    omni_c = None
+    if gcfg.get("enabled"):
+        # fixed omni caption segments from precompute.py --glyph; without them the run would silently train
+        # plain text-to-image, so a missing file is an error
+        omni_c = {k: v.to("cuda") for k, v in load_file(str(precomp / "omni.safetensors")).items()}
 
     state = {"stage": 0, "epoch": 0, "batch": 0, "step": 0, "config": cfg, "commit": git_commit(),
              "lora_params": n_params, "started": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())}
@@ -386,9 +425,19 @@ def main() -> int:
             batches = data.epoch_batches(ep)
             start_b = state["batch"] if (state["stage"] == si and state["epoch"] == ep) else 0
             for bi in range(start_b, len(batches)):
-                lats, txts, masks = data.load(batches[bi], rng)
+                lats, txts, masks, glyphs, otxts = data.load(batches[bi], rng)
                 x0 = torch.stack(lats).to("cuda", torch.float32)
-                prompts = [(empty if rng.random() < cfg.get("caption_dropout", 0.1) else t.to("cuda")) for t in txts]
+                drop_cap = [rng.random() < cfg.get("caption_dropout", 0.1) for _ in txts]
+                # glyph pilot: a whole batch goes in omni mode with its glyph maps, except glyph.dropout of batches,
+                # which train plain text-to-image so the model still draws without a glyph
+                if omni_c and any(g is None for g in glyphs):
+                    raise RuntimeError(f"glyph.enabled but {batches[bi][0]['file']} has no glyph latents; "
+                                       "pre-compute with --glyph")
+                use_glyph = bool(omni_c) and rng.random() >= gcfg.get("dropout", 0.15)
+                if use_glyph:
+                    prompts = [(omni_c["empty"] if d else t.to("cuda")) for d, t in zip(drop_cap, otxts)]
+                else:
+                    prompts = [(empty if d else t.to("cuda")) for d, t in zip(drop_cap, txts)]
                 noise = torch.randn_like(x0)
                 if ts_cfg.get("dist") == "logit_normal":
                     # SD3 logit-normal over sigma in (0, 1); more steps at mid/low noise, where strokes are learned
@@ -403,8 +452,13 @@ def main() -> int:
                 for g in opt.param_groups:
                     g["lr"] = lr
                 with torch.autocast("cuda", dtype=torch.bfloat16):
-                    out = transformer(list(xt.to(torch.bfloat16).unsqueeze(2).unbind(0)), tnorm.to(torch.bfloat16),
-                                      prompts, return_dict=False)[0]
+                    xs = list(xt.to(torch.bfloat16).unsqueeze(2).unbind(0))
+                    if use_glyph:
+                        out = G.omni(transformer, xs, tnorm.to(torch.bfloat16), prompts,
+                                     [g.to("cuda", torch.bfloat16).unsqueeze(1) for g in glyphs],
+                                     omni_c["seg0"], omni_c["seg2"])
+                    else:
+                        out = transformer(xs, tnorm.to(torch.bfloat16), prompts, return_dict=False)[0]
                 pred = -torch.stack(out, 0).squeeze(2).float()
                 err = (pred - (noise - x0)) ** 2
                 tw = loss_cfg.get("text_weight", 1.0)
@@ -425,7 +479,7 @@ def main() -> int:
                 if state["step"] % 10 == 0:
                     el = time.time() - t_start
                     rec = {"step": state["step"], "stage": si, "epoch": ep, "loss": round(loss.item(), 5),
-                           "grad_norm": round(float(gn), 4), "lr": lr, "res": st["res"],
+                           "grad_norm": round(float(gn), 4), "lr": lr, "res": st["res"], "glyph": use_glyph,
                            "samples_per_sec": round(samples_seen / el, 3), "elapsed_sec": round(el, 1),
                            "peak_mem_gb": round(torch.cuda.max_memory_allocated() / 2**30, 2),
                            "steps_this_epoch": len(batches)}

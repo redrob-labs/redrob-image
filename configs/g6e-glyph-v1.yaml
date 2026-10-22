@@ -1,0 +1,54 @@
+# Glyph pilot v1 (docs/glyph-pilot-plan.md): r64 v2 plus a glyph condition. The target text, drawn white on black
+# in Noto Sans KR Bold at its box, goes in as a clean omni-mode condition image (scripts/glyph.py), so the DiT sees
+# the strokes it has to draw. 15% of batches drop the glyph and train plain text-to-image.
+# Everything else is configs/g6e-r64v2.yaml, so the two runs differ in the glyph only.
+# HF_HOME=~/hf python scripts/train_lora.py --config configs/g6e-glyph-v1.yaml --run ~/runs/pilot-glyph-v1
+model: Tongyi-MAI/Z-Image
+precomp: ~/data/precomp-glyph    # precompute.py --glyph (512 all, 1024 6000 per source)
+s3: ""
+seed: 0
+mix:
+  aihub105: 20000
+  synth: 20000
+variants: [ko_long, ko_short, en]
+caption_dropout: 0.1
+gradient_checkpointing: true
+glyph:
+  enabled: true
+  dropout: 0.15                  # share of batches trained without the glyph
+lora:
+  rank: 64
+  alpha: 64
+  targets: [to_q, to_k, to_v, to_out.0, feed_forward.w1, feed_forward.w2, feed_forward.w3]
+loss:
+  text_weight: 5.0
+timesteps:
+  dist: logit_normal
+  mean: 0.0
+  std: 1.0
+optim:
+  lr: 1.0e-4
+  warmup: 100
+  max_grad_norm: 1.0
+stages:
+  - {res: 512, batch: 8, epochs: 2, min_text_px: 16}
+  - {res: 1024, batch: 2, steps: 3000}
+ckpt_minutes: 30
+val:
+  precomp: ~/data/precomp-val-glyph
+  glyph: true
+  res: 512
+  every: 1000
+  max_per_source: 128
+  levels: 8
+  seed: 1234
+  variant: ko_long
+eval:
+  every: 2500
+  glyph: true
+  prompts: [eval/prompts.jsonl]
+  subset: 40
+  seeds: [42]
+  resolution: 1024
+  steps: 28
+  guidance: 4.0

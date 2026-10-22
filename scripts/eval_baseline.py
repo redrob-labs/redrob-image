@@ -93,11 +93,23 @@ def generate(a, rows, img_dir: Path) -> dict:
     if a.guidance > 0:
         kw.update(negative_prompt=a.negative, cfg_normalization=a.cfg_normalization)
     secs = []
+    if a.glyph:
+        sys.path.insert(0, str(ROOT / "scripts"))
+        import glyph as G
+
+        (img_dir.parent / "glyphs").mkdir(exist_ok=True)
     for i, (r, s) in enumerate(todo):
         prompt = r["prompt_ko"] if a.lang == "ko" else r["prompt_en"]
         torch.cuda.synchronize()
         t = time.time()
-        img = pipe(prompt=prompt, generator=torch.Generator("cuda").manual_seed(s), **kw).images[0]
+        gen_ = torch.Generator("cuda").manual_seed(s)
+        if a.glyph:
+            gkw = {k: v for k, v in kw.items() if k not in ("height", "width", "negative_prompt")}
+            img, g = G.generate(pipe, prompt, r["target_text"], r.get("scene", ""), a.resolution,
+                                negative=a.negative, generator=gen_, **gkw)
+            g.save(img_dir.parent / "glyphs" / f"{r['id']}.png")
+        else:
+            img = pipe(prompt=prompt, generator=gen_, **kw).images[0]
         torch.cuda.synchronize()
         secs.append(time.time() - t)
         img.save(img_dir / f"{r['id']}_s{s}.png")
@@ -159,6 +171,8 @@ def main() -> None:
     ap.add_argument("--out", required=True)
     ap.add_argument("--lora", default="", help="LoRA .safetensors (or dir) to load into the pipeline")
     ap.add_argument("--lora-scale", type=float, default=1.0)
+    ap.add_argument("--glyph", action="store_true",
+                    help="condition on a glyph map of target_text at the default scene layout (scripts/glyph.py)")
     a = ap.parse_args()
 
     out = Path(a.out)
@@ -191,7 +205,7 @@ def main() -> None:
     import torch
 
     meta = dict(
-        model=a.model, steps=a.steps, guidance=a.guidance, negative_prompt=a.negative,
+        model=a.model, steps=a.steps, guidance=a.guidance, negative_prompt=a.negative, glyph=a.glyph,
         cfg_normalization=a.cfg_normalization, resolution=a.resolution, seeds=a.seeds, lang=a.lang,
         prompts=a.prompts, subset=a.subset, n_prompts=len(rows), n_images=len(scored), dtype="bfloat16",
         ocr=a.ocr, ocr_sec_per_image=sum(ocr_secs) / len(ocr_secs), ocr_load_sec=ocr_load,
