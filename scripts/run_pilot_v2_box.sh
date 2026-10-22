@@ -21,13 +21,13 @@ evals() {  # $1 = run dir: qwen3vl scoring of in-training snapshots, then Turbo/
   local RUN=$1
   for d in "$RUN"/eval/step-*; do
     [ -f "$d/report.json" ] || step $PY scripts/eval_baseline.py --model Tongyi-MAI/Z-Image --steps 28 --guidance 4 \
-        --subset 40 --ocr qwen3vl-8b --out "$d"
+        --subset 40 --ocr dual --out "$d"
   done
   for m in Tongyi-MAI/Z-Image-Turbo:9:0 Tongyi-MAI/Z-Image:28:4; do
     IFS=: read -r model steps g <<< "$m"
     tag=$(basename "$model")
     [ -f "$RUN/final-eval-$tag/report.json" ] || step $PY scripts/eval_baseline.py --model "$model" --steps "$steps" \
-        --guidance "$g" --prompts eval/prompts.jsonl eval/prompts_unseen_syllables.jsonl --ocr qwen3vl-8b \
+        --guidance "$g" --prompts eval/prompts.jsonl eval/prompts_unseen_syllables.jsonl --ocr dual \
         --lora "$RUN/final/pytorch_lora_weights.safetensors" --out "$RUN/final-eval-$tag"
   done
 }

@@ -29,6 +29,8 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "eval"))
 import metrics  # noqa: E402
 
+DUAL = ["paddleocr", "qwen3vl-8b"]  # --ocr dual: a text is right only when both engines read it right
+
 
 def load_prompts(files: list[str]) -> list[dict]:
     rows = []
@@ -166,7 +168,7 @@ def main() -> None:
     ap.add_argument("--seeds", type=int, nargs="+", default=[42])
     ap.add_argument("--resolution", type=int, default=1024)
     ap.add_argument("--lang", choices=["ko", "en"], default="ko")
-    ap.add_argument("--ocr", default="paddleocr")
+    ap.add_argument("--ocr", default="dual", help="an engine name, or 'dual' = paddleocr AND qwen3vl-8b must agree")
     ap.add_argument("--review-frac", type=float, default=0.2)
     ap.add_argument("--out", required=True)
     ap.add_argument("--lora", default="", help="LoRA .safetensors (or dir) to load into the pipeline")
@@ -187,17 +189,31 @@ def main() -> None:
     import ocr_engines
     from PIL import Image
 
+    # paddleocr lives in its own venv on the gpu-box; without this the glyph reaction check died on import.
+    pp = Path.home() / "paddle-venv/bin/python"
+    if pp.exists():
+        __import__("os").environ.setdefault("REDROB_PADDLE_PY", str(pp))
     t0 = time.time()
-    eng = ocr_engines.make(a.ocr)
+    names = DUAL if a.ocr == "dual" else [a.ocr]
+    engs = {n: ocr_engines.make(n) for n in names}
     ocr_load = time.time() - t0
     scored, ocr_secs = [], []
     for r in rows:
         for s in a.seeds:
             iid = f"{r['id']}_s{s}"
             t = time.time()
-            lines = eng(Image.open(img_dir / f"{iid}.png"))
+            img = Image.open(img_dir / f"{iid}.png")
+            per = {n: e(img) for n, e in engs.items()}
             ocr_secs.append(time.time() - t)
-            scored.append(dict(r, seed=s, image_id=iid, lines=lines, **metrics.score_one(r["target_text"], lines)))
+            if a.ocr == "dual":
+                sc = {n: metrics.score_one(r["target_text"], ls) for n, ls in per.items()}
+                row = dict(r, seed=s, image_id=iid, lines=per[DUAL[0]], **metrics.combine(*sc.values()))
+                for n in names:
+                    row[f"lines_{n}"], row[f"score_{n}"] = per[n], sc[n]
+                scored.append(row)
+            else:
+                lines = per[a.ocr]
+                scored.append(dict(r, seed=s, image_id=iid, lines=lines, **metrics.score_one(r["target_text"], lines)))
     with (out / "scores.jsonl").open("w", encoding="utf-8") as f:
         for r in scored:
             f.write(json.dumps(r, ensure_ascii=False) + "\n")

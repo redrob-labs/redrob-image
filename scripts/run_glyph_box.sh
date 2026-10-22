@@ -26,20 +26,20 @@ step $PY scripts/precompute.py --glyph --res 1024 --out "$PRE" --aihub "$SHARDS:
   --max-per-source 6000 --vae-batch 2
 # Base was not trained with a glyph-only condition; see whether it reacts at all before training
 [ -f "$RUNS/glyph-react-base/report.json" ] || step $PY scripts/eval_baseline.py --model Tongyi-MAI/Z-Image --steps 28 \
-  --guidance 4 --subset 10 --glyph --ocr qwen3vl-8b --out "$RUNS/glyph-react-base"
+  --guidance 4 --subset 10 --glyph --ocr dual --out "$RUNS/glyph-react-base"
 [ -f "$RUNS/glyph-smoke/summary.json" ] || step $PY scripts/train_lora.py --config configs/g6e-glyph-v1.yaml \
   --run "$RUNS/glyph-smoke" --max-steps 100 --no-eval
 step $PY scripts/train_lora.py --config configs/g6e-glyph-v1.yaml --run "$RUN"
 
 for d in "$RUN"/eval/step-*; do
   [ -f "$d/report.json" ] || step $PY scripts/eval_baseline.py --model Tongyi-MAI/Z-Image --steps 28 --guidance 4 \
-      --subset 40 --glyph --ocr qwen3vl-8b --out "$d"
+      --subset 40 --glyph --ocr dual --out "$d"
 done
 for m in Tongyi-MAI/Z-Image-Turbo:9:0 Tongyi-MAI/Z-Image:28:4; do
   IFS=: read -r model steps g <<< "$m"
   tag=$(basename "$model")
   [ -f "$RUN/final-eval-$tag/report.json" ] || step $PY scripts/eval_baseline.py --model "$model" --steps "$steps" \
-      --guidance "$g" --prompts eval/prompts.jsonl eval/prompts_unseen_syllables.jsonl --glyph --ocr qwen3vl-8b \
+      --guidance "$g" --prompts eval/prompts.jsonl eval/prompts_unseen_syllables.jsonl --glyph --ocr dual \
       --lora "$RUN/final/pytorch_lora_weights.safetensors" --out "$RUN/final-eval-$tag"
 done
 echo "GLYPH CHAIN DONE $(date -u +%FT%TZ)"

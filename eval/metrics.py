@@ -85,6 +85,15 @@ def score_one(target: str, lines: list[dict]) -> dict:
                 ocr_concat=cands[0])
 
 
+def combine(a: dict, b: dict) -> dict:
+    """Strict two-engine score: a text counts as right only when BOTH engines read it right, and the CER is
+    the worse of the two. A VLM OCR can guess a plausible word from the scene (it called a stroke-less
+    signboard '약국'); a detector+recognizer OCR rarely invents text, so requiring agreement removes those."""
+    return dict(cer=max(a["cer"], b["cer"]), cer_raw=max(a["cer_raw"], b["cer_raw"]),
+                cer_nospace=max(a["cer_nospace"], b["cer_nospace"]), em=bool(a["em"] and b["em"]),
+                best=a["best"] if a["cer"] >= b["cer"] else b["best"], ocr_concat=a["ocr_concat"])
+
+
 def aggregate(rows: list[dict], keys=("split", "bucket", "scene", "has_unseen_syllable")) -> dict:
     """rows: prompt fields + score_one fields. Returns overall and per-key / per-(split,bucket) means."""
 
