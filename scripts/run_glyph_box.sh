@@ -26,7 +26,7 @@ step $PY scripts/precompute.py --glyph --res 1024 --out "$PRE" --aihub "$SHARDS:
   --max-per-source 6000 --vae-batch 2
 # Base was not trained with a glyph-only condition; see whether it reacts at all before training
 [ -f "$RUNS/glyph-react-base/report.json" ] || step $PY scripts/eval_baseline.py --model Tongyi-MAI/Z-Image --steps 28 \
-  --guidance 4 --subset 10 --glyph --ocr paddleocr --out "$RUNS/glyph-react-base"
+  --guidance 4 --subset 10 --glyph --ocr qwen3vl-8b --out "$RUNS/glyph-react-base"
 [ -f "$RUNS/glyph-smoke/summary.json" ] || step $PY scripts/train_lora.py --config configs/g6e-glyph-v1.yaml \
   --run "$RUNS/glyph-smoke" --max-steps 100 --no-eval
 step $PY scripts/train_lora.py --config configs/g6e-glyph-v1.yaml --run "$RUN"
