@@ -104,7 +104,7 @@ class Data:
     def load(self, batch: list[dict], rng: random.Random):
         """Latents, caption embeddings, text masks, and (when cached) glyph latents + omni caption segments for
         the same caption variant; glyph entries are None when the shard has none."""
-        lats, txts, masks, glyphs, otxts = [], [], [], [], []
+        lats, txts, masks, glyphs, otxts, mtxts = [], [], [], [], [], []
         for r in batch:
             h = self._open(r["file"])
             keys = h.keys()
@@ -116,7 +116,15 @@ class Data:
             g = f"{r['i']}.glyph"
             glyphs.append(h.get_tensor(g) if g in keys else None)
             otxts.append(h.get_tensor(f"{r['i']}.otxt.{v}") if g in keys else None)
-        return lats, txts, masks, glyphs, otxts
+            # masked caption (scripts/precompute_mtxt.py sidecar): quoted text replaced with "*"
+            side = r["file"].removesuffix(".safetensors") + ".mtxt.safetensors"
+            mk = f"{r['i']}.mtxt.{v}"
+            if (self.dir / side).exists():
+                hm = self._open(side)
+                mtxts.append(hm.get_tensor(mk) if mk in hm.keys() else None)
+            else:
+                mtxts.append(None)
+        return lats, txts, masks, glyphs, otxts, mtxts
 
 
 def lora_targets(cfg: dict) -> list[str]:
@@ -408,6 +416,11 @@ def main() -> int:
         print(f"resumed from {ck} at step {state['step']}", flush=True)
     elif cfg.get("init_lora"):
         load_lora_into(transformer, Path(os.path.expanduser(cfg["init_lora"])))
+        if proj is not None and gcfg.get("init_proj"):  # carry a trained glyph projection over from an earlier run
+            ip = Path(os.path.expanduser(gcfg["init_proj"]))
+            if not ip.exists():
+                raise SystemExit(f"glyph.init_proj {ip} not found")
+            G.install_channel(transformer, ip)
         for p in params:
             p.data = p.data.float()
     (run / "config.json").write_text(json.dumps(state, indent=2, default=str), encoding="utf-8")
@@ -443,7 +456,7 @@ def main() -> int:
             batches = data.epoch_batches(ep)
             start_b = state["batch"] if (state["stage"] == si and state["epoch"] == ep) else 0
             for bi in range(start_b, len(batches)):
-                lats, txts, masks, glyphs, otxts = data.load(batches[bi], rng)
+                lats, txts, masks, glyphs, otxts, mtxts = data.load(batches[bi], rng)
                 x0 = torch.stack(lats).to("cuda", torch.float32)
                 drop_cap = [rng.random() < cfg.get("caption_dropout", 0.1) for _ in txts]
                 # glyph pilot: a whole batch goes in omni mode with its glyph maps, except glyph.dropout of batches,
@@ -455,7 +468,13 @@ def main() -> int:
                 if use_glyph and not channel:
                     prompts = [(omni_c["empty"] if d else t.to("cuda")) for d, t in zip(drop_cap, otxts)]
                 else:
-                    prompts = [(empty if d else t.to("cuda")) for d, t in zip(drop_cap, txts)]
+                    pm = gcfg.get("mask_caption", 0.0) if (channel and use_glyph) else 0.0
+                    if pm and any(m is None for m in mtxts):
+                        raise RuntimeError(f"glyph.mask_caption set but {batches[bi][0]['file']} has no masked "
+                                           "captions; run scripts/precompute_mtxt.py")
+                    # with the text hidden behind "*", the glyph is the only source of the text to draw
+                    prompts = [(empty if d else (m if rng.random() < pm else t).to("cuda"))
+                               for d, t, m in zip(drop_cap, txts, mtxts)]
                 noise = torch.randn_like(x0)
                 if ts_cfg.get("dist") == "logit_normal":
                     # SD3 logit-normal over sigma in (0, 1); more steps at mid/low noise, where strokes are learned
