@@ -145,7 +145,8 @@ class StableVal:
         self._open = lambda f: self.h.setdefault(f, safe_open(str(d / f), framework="pt"))
         # glyph runs score with the glyph condition on (the val set must be pre-computed with --glyph)
         self.omni = None
-        if cfg.get("glyph"):
+        self.channel = cfg.get("glyph") == "channel"
+        if cfg.get("glyph") and not self.channel:
             from safetensors.torch import load_file
 
             self.omni = {k: v.to("cuda") for k, v in load_file(str(d.parent / "omni.safetensors")).items()}
@@ -169,7 +170,12 @@ class StableVal:
                 xt = (1 - sig) * x0 + sig * noise
                 xs = list(xt.to(torch.bfloat16).unsqueeze(2).unbind(0))
                 tt = (1 - sig.view(-1)).to(torch.bfloat16)
-                if self.omni:
+                if self.channel:
+                    import glyph as G
+
+                    gl = h.get_tensor(f"{r['i']}.glyph").to("cuda", torch.bfloat16).unsqueeze(1)
+                    out = transformer(G.cat_glyph(xs, [gl] * L), tt, [txt] * L, return_dict=False)[0]
+                elif self.omni:
                     import glyph as G
 
                     gl = h.get_tensor(f"{r['i']}.glyph").to("cuda", torch.bfloat16).unsqueeze(1)
@@ -225,6 +231,10 @@ def save_ckpt(run: Path, tag: str, transformer, opt, state: dict, s3: str, keep:
     tmp.mkdir(parents=True, exist_ok=True)
     lora = {k: v.detach().to(torch.bfloat16).cpu().contiguous() for k, v in get_peft_model_state_dict(transformer).items()}
     ZImagePipeline.save_lora_weights(str(tmp), transformer_lora_layers=lora)
+    if hasattr(transformer.all_x_embedder["2-1"], "proj"):  # glyph channel mode
+        import glyph as G
+
+        G.save_proj(transformer, tmp / G.PROJ_FILE)
     torch.save({"opt": opt.state_dict(), "state": state, "rng": {"py": random.getstate(), "torch": torch.get_rng_state(),
                                                                "cuda": torch.cuda.get_rng_state()}}, tmp / "trainer.pt")
     (tmp / "state.json").write_text(json.dumps(state, indent=2), encoding="utf-8")
@@ -302,7 +312,8 @@ def run_eval(cfg: dict, transformer, out_dir: Path, model: str):
                 kw = dict(num_inference_steps=cfg.get("steps", 28), guidance_scale=cfg.get("guidance", 4.0),
                           generator=torch.Generator("cuda").manual_seed(s))
                 if use_glyph:
-                    img, g = G.generate(pipe, r["prompt_ko"], r["target_text"], r.get("scene", ""), res, **kw)
+                    img, g = G.generate(pipe, r["prompt_ko"], r["target_text"], r.get("scene", ""), res,
+                                        mode="channel" if cfg.get("glyph") == "channel" else "omni", **kw)
                     g.save(out_dir / "glyphs" / f"{r['id']}.png")
                 else:
                     img = pipe(prompt=r["prompt_ko"], height=res, width=res, negative_prompt="", **kw).images[0]
@@ -356,20 +367,25 @@ def main() -> int:
     lc = cfg["lora"]
     transformer.add_adapter(LoraConfig(r=lc["rank"], lora_alpha=lc.get("alpha", lc["rank"]), lora_dropout=0.0,
                                        init_lora_weights="gaussian", target_modules=lora_targets(lc)))
+    import glyph as G
+
+    gcfg = cfg.get("glyph") or {}
+    channel = bool(gcfg.get("enabled")) and gcfg.get("mode") == "channel"
+    proj = G.install_channel(transformer) if channel else None
     params = [p for p in transformer.parameters() if p.requires_grad]
     for p in params:
         p.data = p.data.float()
     n_params = sum(p.numel() for p in params)
-    opt = torch.optim.AdamW(params, lr=cfg["optim"]["lr"], betas=(0.9, 0.999), weight_decay=cfg["optim"].get("weight_decay", 0.0))
+    groups = [{"params": [p for p in params if proj is None or p is not proj.weight], "mult": 1.0}]
+    if proj is not None:
+        groups.append({"params": [proj.weight], "mult": gcfg.get("proj_lr_mult", 1.0)})
+    opt = torch.optim.AdamW(groups, lr=cfg["optim"]["lr"], betas=(0.9, 0.999), weight_decay=cfg["optim"].get("weight_decay", 0.0))
     sched = FlowMatchEulerDiscreteScheduler.from_pretrained(model, subfolder="scheduler")
     sigmas_all = sched.sigmas.to("cuda", torch.float32)
     n_train = sched.config.num_train_timesteps
     empty = load_file(str(precomp / "empty.safetensors"))["txt"].to("cuda")
-    import glyph as G
-
-    gcfg = cfg.get("glyph") or {}
     omni_c = None
-    if gcfg.get("enabled"):
+    if gcfg.get("enabled") and not channel:
         # fixed omni caption segments from precompute.py --glyph; without them the run would silently train
         # plain text-to-image, so a missing file is an error
         omni_c = {k: v.to("cuda") for k, v in load_file(str(precomp / "omni.safetensors")).items()}
@@ -379,6 +395,8 @@ def main() -> int:
     ck = latest_ckpt(run, s3)
     if ck:
         load_lora_into(transformer, ck)
+        if proj is not None:
+            G.install_channel(transformer, ck / G.PROJ_FILE)
         for p in params:
             p.data = p.data.float()
         t = torch.load(ck / "trainer.pt", map_location="cpu", weights_only=False)
@@ -430,11 +448,11 @@ def main() -> int:
                 drop_cap = [rng.random() < cfg.get("caption_dropout", 0.1) for _ in txts]
                 # glyph pilot: a whole batch goes in omni mode with its glyph maps, except glyph.dropout of batches,
                 # which train plain text-to-image so the model still draws without a glyph
-                if omni_c and any(g is None for g in glyphs):
+                if (omni_c or channel) and any(g is None for g in glyphs):
                     raise RuntimeError(f"glyph.enabled but {batches[bi][0]['file']} has no glyph latents; "
                                        "pre-compute with --glyph")
-                use_glyph = bool(omni_c) and rng.random() >= gcfg.get("dropout", 0.15)
-                if use_glyph:
+                use_glyph = bool(omni_c or channel) and rng.random() >= gcfg.get("dropout", 0.15)
+                if use_glyph and not channel:
                     prompts = [(omni_c["empty"] if d else t.to("cuda")) for d, t in zip(drop_cap, otxts)]
                 else:
                     prompts = [(empty if d else t.to("cuda")) for d, t in zip(drop_cap, txts)]
@@ -450,10 +468,14 @@ def main() -> int:
                 tnorm = (1 - sig.view(-1))  # == (1000 - timestep) / 1000 for this scheduler
                 lr = base_lr * min(1.0, (state["step"] + 1) / max(warmup, 1))
                 for g in opt.param_groups:
-                    g["lr"] = lr
+                    g["lr"] = lr * g.get("mult", 1.0)
                 with torch.autocast("cuda", dtype=torch.bfloat16):
                     xs = list(xt.to(torch.bfloat16).unsqueeze(2).unbind(0))
-                    if use_glyph:
+                    if channel:
+                        # dropped batches get a zero glyph, which is exactly the model without the glyph path
+                        gl = [g.to("cuda", torch.bfloat16).unsqueeze(1) if use_glyph else None for g in glyphs]
+                        out = transformer(G.cat_glyph(xs, gl), tnorm.to(torch.bfloat16), prompts, return_dict=False)[0]
+                    elif use_glyph:
                         out = G.omni(transformer, xs, tnorm.to(torch.bfloat16), prompts,
                                      [g.to("cuda", torch.bfloat16).unsqueeze(1) for g in glyphs],
                                      omni_c["seg0"], omni_c["seg2"])

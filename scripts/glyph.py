@@ -202,6 +202,83 @@ def patched(transformer, glyph_lat, seg0, seg2):
         transformer.forward = orig
 
 
+# ---- channel mode (glyph v2): the glyph latent rides on extra input channels of the noisy latent ----
+# The DiT patchifies (C, F, H, W) with C innermost, so a 32-channel input [x_t; glyph] gives every token the glyph
+# patch at the same place as the image patch. GlyphEmbed splits the two: the frozen x_embedder sees the image half
+# as before, and a new zero-initialised linear adds the glyph half (ControlNet / AnyText style). At step 0 the model
+# is exactly the one it wraps, and a zero glyph is exactly "no glyph".
+PROJ_FILE = "glyph_proj.safetensors"
+EMB_KEY = "2-1"
+
+
+def _glyph_embed_cls():
+    import torch.nn as nn
+
+    class GlyphEmbed(nn.Module):
+        def __init__(self, base: nn.Linear, in_ch: int):
+            super().__init__()
+            self.base, self.in_ch = base, in_ch
+            self.proj = nn.Linear(base.in_features, base.out_features, bias=False)
+            nn.init.zeros_(self.proj.weight)
+
+        def forward(self, inp):
+            if inp.shape[-1] == self.base.in_features:  # 16-channel input: no glyph
+                return self.base(inp)
+            n = inp.shape[0]
+            v = inp.view(n, -1, 2 * self.in_ch)
+            img = v[..., : self.in_ch].reshape(n, -1)
+            gl = v[..., self.in_ch:].reshape(n, -1)
+            return self.base(img) + self.proj(gl.to(self.proj.weight.dtype)).to(img.dtype)
+
+    return GlyphEmbed
+
+
+def install_channel(transformer, proj_path=None):
+    """Wrap the x_embedder; returns the new trainable proj (fp32). Loads proj weights when proj_path exists."""
+    import torch
+
+    emb = transformer.all_x_embedder[EMB_KEY]
+    if not hasattr(emb, "proj"):
+        emb = _glyph_embed_cls()(emb, transformer.in_channels)
+        transformer.all_x_embedder[EMB_KEY] = emb
+    emb.proj.to(device=emb.base.weight.device, dtype=torch.float32)
+    if proj_path and Path(proj_path).exists():
+        from safetensors.torch import load_file
+
+        emb.proj.weight.data.copy_(load_file(str(proj_path))["weight"].to(emb.proj.weight.device, torch.float32))
+    emb.proj.weight.requires_grad_(True)
+    return emb.proj
+
+
+def save_proj(transformer, path):
+    from safetensors.torch import save_file
+
+    w = transformer.all_x_embedder[EMB_KEY].proj.weight
+    save_file({"weight": w.detach().float().cpu().contiguous()}, str(path))
+
+
+def cat_glyph(xt: list, glyph: list):
+    """Per item (C, 1, H, W) noisy latent + glyph latent -> (2C, 1, H, W). A None glyph is a zero glyph."""
+    import torch
+
+    return [torch.cat([x, torch.zeros_like(x) if g is None else g.to(x.device, x.dtype)], 0) for x, g in zip(xt, glyph)]
+
+
+@contextmanager
+def patched_channel(transformer, glyph_lat):
+    """Run ZImagePipeline with glyph_lat (C, 1, H, W) concatenated to every noisy latent, the negative branch too."""
+    orig = transformer.forward
+
+    def fwd(x, t, cap_feats, *args, **kw):
+        return orig(cat_glyph(x, [glyph_lat] * len(x)), t, cap_feats, *args, **kw)
+
+    transformer.forward = fwd
+    try:
+        yield
+    finally:
+        transformer.forward = orig
+
+
 def encode_glyph(vae, img):
     """VAE latent (C, 1, h, w), shifted and scaled like precompute.py."""
     import numpy as np
@@ -215,11 +292,16 @@ def encode_glyph(vae, img):
     return z[0].unsqueeze(1)
 
 
-def generate(pipe, prompt: str, text: str, scene: str, res: int, negative: str = "", **kw):
+def generate(pipe, prompt: str, text: str, scene: str, res: int, negative: str = "", mode: str = "omni", **kw):
     """One ZImagePipeline image with the glyph condition for `text` at the default layout. Returns
-    (image, glyph map). kw goes to the pipeline (num_inference_steps, guidance_scale, generator, ...)."""
+    (image, glyph map). kw goes to the pipeline (num_inference_steps, guidance_scale, generator, ...).
+    mode "channel" needs install_channel() on pipe.transformer first."""
     g = render(layout(text, scene, res, res), res, res)
     lat = encode_glyph(pipe.vae, g)
+    if mode == "channel":
+        with patched_channel(pipe.transformer, lat):
+            img = pipe(prompt=prompt, negative_prompt=negative, height=res, width=res, **kw).images[0]
+        return img, g
     seg0, (s1, s1n), seg2 = segments(pipe.tokenizer, pipe.text_encoder, [prompt, negative])
     dev = pipe.vae.device
     with patched(pipe.transformer, lat, seg0, seg2):

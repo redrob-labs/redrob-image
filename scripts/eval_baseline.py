@@ -90,6 +90,16 @@ def generate(a, rows, img_dir: Path) -> dict:
         # a LoRA trained on Base can be applied to any Z-Image transformer (Base, Turbo, our own)
         pipe.load_lora_weights(a.lora, adapter_name="ko")
         pipe.set_adapters(["ko"], adapter_weights=[a.lora_scale])
+    if a.glyph and a.glyph_mode == "channel":
+        sys.path.insert(0, str(ROOT / "scripts"))
+        import glyph as G
+
+        lp = Path(a.lora) if a.lora else None
+        proj = (lp if lp and lp.is_dir() else lp.parent) / G.PROJ_FILE if lp else None
+        if not (proj and proj.exists()):
+            raise SystemExit(f"--glyph-mode channel needs {G.PROJ_FILE} next to the LoRA")
+        G.install_channel(pipe.transformer, proj)
+        pipe.transformer.all_x_embedder[G.EMB_KEY].proj.to(torch.bfloat16)
     info["load_sec"] = time.time() - t0
     kw = dict(height=a.resolution, width=a.resolution, num_inference_steps=a.steps, guidance_scale=a.guidance)
     if a.guidance > 0:
@@ -108,7 +118,7 @@ def generate(a, rows, img_dir: Path) -> dict:
         if a.glyph:
             gkw = {k: v for k, v in kw.items() if k not in ("height", "width", "negative_prompt")}
             img, g = G.generate(pipe, prompt, r["target_text"], r.get("scene", ""), a.resolution,
-                                negative=a.negative, generator=gen_, **gkw)
+                                negative=a.negative, generator=gen_, mode=a.glyph_mode, **gkw)
             g.save(img_dir.parent / "glyphs" / f"{r['id']}.png")
         else:
             img = pipe(prompt=prompt, generator=gen_, **kw).images[0]
@@ -175,6 +185,8 @@ def main() -> None:
     ap.add_argument("--lora-scale", type=float, default=1.0)
     ap.add_argument("--glyph", action="store_true",
                     help="condition on a glyph map of target_text at the default scene layout (scripts/glyph.py)")
+    ap.add_argument("--glyph-mode", choices=["omni", "channel"], default="omni",
+                    help="channel: glyph latent on extra input channels (needs glyph_proj.safetensors beside --lora)")
     a = ap.parse_args()
 
     out = Path(a.out)
