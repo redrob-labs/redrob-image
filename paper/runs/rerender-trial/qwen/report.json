@@ -1,0 +1,192 @@
+{
+ "meta": {
+  "model": "Tongyi-MAI/Z-Image",
+  "steps": 28,
+  "guidance": 4.0,
+  "negative_prompt": "",
+  "glyph": false,
+  "cfg_normalization": false,
+  "resolution": 1024,
+  "seeds": [
+   42
+  ],
+  "lang": "ko",
+  "prompts": [
+   "/home/ubuntu/runs/rerender-trial/prompts.jsonl"
+  ],
+  "subset": 0,
+  "n_prompts": 20,
+  "n_images": 20,
+  "dtype": "bfloat16",
+  "ocr": "dual",
+  "ocr_sec_per_image": 0.6829872250556945,
+  "ocr_load_sec": 7.375044822692871,
+  "generation": {
+   "generated": 0,
+   "sec_per_image": null
+  },
+  "git_commit": "unknown",
+  "packages": {
+   "python": "3.12.3",
+   "torch": "2.11.0+cu128",
+   "diffusers": "0.42.0.dev0",
+   "transformers": "5.20.1",
+   "accelerate": "1.15.0",
+   "easyocr": "1.7.2"
+  },
+  "gpu": "NVIDIA L40S",
+  "host": "gpu-box",
+  "started": "2026-10-24T18:22:26+0000",
+  "wall_sec": 25.861345529556274
+ },
+ "metrics": {
+  "overall": {
+   "n": 20,
+   "cer": 0.47105519480519475,
+   "cer_nospace": 0.4774114774114774,
+   "em": 0.2
+  },
+  "split": {
+   "seen": {
+    "n": 8,
+    "cer": 0.4477272727272727,
+    "cer_nospace": 0.47786935286935284,
+    "em": 0.125
+   },
+   "unseen": {
+    "n": 8,
+    "cer": 0.4174107142857143,
+    "cer_nospace": 0.40315934065934067,
+    "em": 0.375
+   },
+   "unseen_syllable": {
+    "n": 4,
+    "cer": 0.625,
+    "cer_nospace": 0.625,
+    "em": 0.0
+   }
+  },
+  "bucket": {
+   "1-2": {
+    "n": 6,
+    "cer": 0.8333333333333334,
+    "cer_nospace": 0.8333333333333334,
+    "em": 0.0
+   },
+   "11+": {
+    "n": 4,
+    "cer": 0.09337121212121212,
+    "cer_nospace": 0.11324786324786325,
+    "em": 0.25
+   },
+   "3-5": {
+    "n": 6,
+    "cer": 0.4444444444444444,
+    "cer_nospace": 0.4444444444444444,
+    "em": 0.3333333333333333
+   },
+   "6-10": {
+    "n": 4,
+    "cer": 0.34523809523809523,
+    "cer_nospace": 0.3571428571428571,
+    "em": 0.25
+   }
+  },
+  "scene": {
+   "book_cover": {
+    "n": 1,
+    "cer": 0.3333333333333333,
+    "cer_nospace": 0.3333333333333333,
+    "em": 0.0
+   },
+   "poster": {
+    "n": 9,
+    "cer": 0.617636684303351,
+    "cer_nospace": 0.617012617012617,
+    "em": 0.1111111111111111
+   },
+   "signboard": {
+    "n": 10,
+    "cer": 0.3529040404040404,
+    "cer_nospace": 0.36617826617826615,
+    "em": 0.3
+   }
+  },
+  "has_unseen_syllable": {
+   "False": {
+    "n": 16,
+    "cer": 0.4325689935064935,
+    "cer_nospace": 0.44051434676434675,
+    "em": 0.25
+   },
+   "True": {
+    "n": 4,
+    "cer": 0.625,
+    "cer_nospace": 0.625,
+    "em": 0.0
+   }
+  },
+  "split_bucket": {
+   "seen/1-2": {
+    "n": 2,
+    "cer": 1.0,
+    "cer_nospace": 1.0,
+    "em": 0.0
+   },
+   "seen/11+": {
+    "n": 2,
+    "cer": 0.12424242424242424,
+    "cer_nospace": 0.14957264957264957,
+    "em": 0.0
+   },
+   "seen/3-5": {
+    "n": 2,
+    "cer": 0.3333333333333333,
+    "cer_nospace": 0.3333333333333333,
+    "em": 0.5
+   },
+   "seen/6-10": {
+    "n": 2,
+    "cer": 0.3333333333333333,
+    "cer_nospace": 0.42857142857142855,
+    "em": 0.0
+   },
+   "unseen/1-2": {
+    "n": 2,
+    "cer": 0.75,
+    "cer_nospace": 0.75,
+    "em": 0.0
+   },
+   "unseen/11+": {
+    "n": 2,
+    "cer": 0.0625,
+    "cer_nospace": 0.07692307692307693,
+    "em": 0.5
+   },
+   "unseen/3-5": {
+    "n": 2,
+    "cer": 0.5,
+    "cer_nospace": 0.5,
+    "em": 0.5
+   },
+   "unseen/6-10": {
+    "n": 2,
+    "cer": 0.35714285714285715,
+    "cer_nospace": 0.2857142857142857,
+    "em": 0.5
+   },
+   "unseen_syllable/1-2": {
+    "n": 2,
+    "cer": 0.75,
+    "cer_nospace": 0.75,
+    "em": 0.0
+   },
+   "unseen_syllable/3-5": {
+    "n": 2,
+    "cer": 0.5,
+    "cer_nospace": 0.5,
+    "em": 0.0
+   }
+  }
+ }
+}

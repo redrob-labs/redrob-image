@@ -1,0 +1,27 @@
+{
+ "trial": "/home/ubuntu/runs/render-harmonize-trial",
+ "out": "/home/ubuntu/runs/rerender-trial",
+ "mode": "qwen",
+ "seed": 42,
+ "zmodel": "Tongyi-MAI/Z-Image",
+ "lora": "",
+ "lora_scale": 1.0,
+ "steps": 28,
+ "guidance": 4.0,
+ "pads": [
+  24
+ ],
+ "strengths": [
+  0.35,
+  0.5,
+  0.65
+ ],
+ "qsteps": 40,
+ "offload": false,
+ "n_prompts": 20,
+ "n_images": 20,
+ "wall_sec": 2587.4081399440765,
+ "qwen_model": "Qwen/Qwen-Image-Edit-2511",
+ "qwen_instruction": "Make the text \"{t}\" look like it was really printed or painted on this surface: match the scene's lighting, shadows, material texture, perspective and slight wear. Keep exactly the same characters, the same position and the same size. Do not change, add or remove any letters, and do not add any other text. Keep everything else in the image unchanged.",
+ "negative": "글자, 문자, 텍스트, 숫자, 로고, 워터마크"
+}
