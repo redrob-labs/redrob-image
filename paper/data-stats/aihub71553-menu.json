@@ -1,0 +1,55 @@
+{
+  "name": "aihub71553-menu",
+  "source": "AI Hub 71553 (관광 음식메뉴판), validation + Training subsets downloaded so far; unlabeled text from text detection",
+  "settings": {
+    "train_res": "512",
+    "min_text_px": "20",
+    "min_crop": "384",
+    "crop_margin": "1.3",
+    "ignore_text_px": "8",
+    "crop_max_side": "1024",
+    "full_max_side": "1600",
+    "full_check_res": "1024"
+  },
+  "source_images_kept": 6839,
+  "source_images_with_full_sample": 1,
+  "samples": {
+    "val/crop": 22146,
+    "val/full": 1
+  },
+  "samples_by_category": {
+    "menu/crop": 22146,
+    "menu/full": 1
+  },
+  "crop_share": 1.0,
+  "drops": {
+    "image_not_downloaded": 72098,
+    "no_detection": 8005,
+    "det_unlabeled_boxes": 345443,
+    "detection_orientation_mismatch": 546,
+    "duplicate_dhash": 5,
+    "full_skipped_unlabeled_text": 9400,
+    "no_usable_sample": 2562,
+    "unseen": 52,
+    "no_readable_text": 1
+  },
+  "train_text_blocks_by_syllables": {
+    "0": 0,
+    "1-2": 0,
+    "3-5": 0,
+    "6-10": 0,
+    "11+": 0
+  },
+  "train_text_blocks_without_hangul": 0,
+  "train_blocks_per_sample": {},
+  "syllables_distinct": 0,
+  "syllables_outside_ks": 0,
+  "ks2350_covered": 0,
+  "ks2350_with_at_least": {
+    "1": 0,
+    "5": 0,
+    "20": 0,
+    "100": 0
+  },
+  "syllable_occurrences": 0
+}

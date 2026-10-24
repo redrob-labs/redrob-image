@@ -1,0 +1,11 @@
+{
+  "steps": 11492,
+  "seconds": 33461.2,
+  "samples": 39936,
+  "samples_per_sec": 1.194,
+  "tokens": 50314912,
+  "peak_mem_gb": 23.08,
+  "lora_params": 33423360,
+  "gpu": "NVIDIA L40S",
+  "commit": ""
+}

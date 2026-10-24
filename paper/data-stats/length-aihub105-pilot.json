@@ -1,0 +1,47 @@
+{
+ "name": "aihub105-pilot",
+ "res": 512,
+ "samples": 55098,
+ "buckets": {
+  "1-2": {
+   "blocks": 27017,
+   "samples_with_only_this": 10015,
+   "short_side_px_p10": 84.2,
+   "short_side_px_p50": 185.5,
+   "short_side_px_p90": 295.5,
+   "area_share_p50": 0.2314
+  },
+  "3-5": {
+   "blocks": 43854,
+   "samples_with_only_this": 19328,
+   "short_side_px_p10": 71.1,
+   "short_side_px_p50": 132.7,
+   "short_side_px_p90": 197.9,
+   "area_share_p50": 0.2193
+  },
+  "6-10": {
+   "blocks": 10806,
+   "samples_with_only_this": 4955,
+   "short_side_px_p10": 50.1,
+   "short_side_px_p50": 93.1,
+   "short_side_px_p90": 135.6,
+   "area_share_p50": 0.1653
+  },
+  "11+": {
+   "blocks": 140,
+   "samples_with_only_this": 26,
+   "short_side_px_p10": 30.8,
+   "short_side_px_p50": 45.4,
+   "short_side_px_p90": 73.1,
+   "area_share_p50": 0.0659
+  },
+  "0": {
+   "blocks": 18,
+   "samples_with_only_this": 3,
+   "short_side_px_p10": 23.7,
+   "short_side_px_p50": 61.0,
+   "short_side_px_p90": 182.7,
+   "area_share_p50": 0.0493
+  }
+ }
+}

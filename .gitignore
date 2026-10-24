@@ -1,3 +1,29 @@
 # Weights are large - track with Git LFS when publishing; keep local copies out of accidental commits without LFS.
 *.safetensors
 !/.gitattributes
+
+# Korean text training. AI Hub data must never be committed (see docs/plan.md).
+/data/
+/outputs/
+/checkpoints/
+*.ckpt
+*.pt
+*.bin
+*.tar
+*.webdataset
+aihub/
+**/aihub_raw/
+**/aihub_cache/
+
+# Generated images stay in private S3, not git.
+/eval/out/
+/synth/out/
+/paper/images/
+
+# Local secrets and environments
+.env
+.env.*
+*.pem
+.venv/
+__pycache__/
+*.pyc

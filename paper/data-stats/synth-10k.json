@@ -1,0 +1,176 @@
+{
+ "name": "synth-10k",
+ "images": 10000,
+ "jpgs": 10000,
+ "shards": 10,
+ "images_per_sec": 94.44,
+ "render_seconds": 105.9,
+ "workers": 16,
+ "seed": 6,
+ "stage": 1,
+ "n": 20,
+ "n2": 2,
+ "render_errors": 0,
+ "ksx1001": {
+  "syllables": 2350,
+  "min": 20,
+  "median": 20.0,
+  "max": 4640,
+  "below_n": 0,
+  "held_out_as_unseen_words": {
+   "삯": 0,
+   "홰": 0
+  },
+  "min_including_held_out": 0
+ },
+ "hangul_11172": {
+  "covered_at_least_1": 2350,
+  "allowed_syllables": 11050,
+  "non_ks_allowed": 8702,
+  "non_ks_at_least_n2": 0,
+  "non_ks_min": 0
+ },
+ "unseen_filter": {
+  "leaked_unseen_syllable_occurrences": 0,
+  "leaked_texts_or_captions": 0,
+  "leak_examples": [],
+  "corpus_sentences_rejected_at_build": "see data/corpus build log (build_corpus.py prints unseen_rejected)",
+  "render_time_rejects": 0
+ },
+ "captions": {
+  "lines_missing_from_any_caption": 0
+ },
+ "polygons_outside_image": 0,
+ "text_blocks": 35443,
+ "coverage_blocks": 9163,
+ "blocks_per_image": {
+  "1": 28,
+  "2": 669,
+  "3": 3135,
+  "4": 6168
+ },
+ "block_length_chars": {
+  "mean": 12.29,
+  "median": 8,
+  "hist": {
+   "1-2": 1738,
+   "3-4": 3669,
+   "5-8": 12830,
+   "9-16": 10151,
+   "17-32": 4448,
+   "33-64": 2408,
+   "65+": 199
+  }
+ },
+ "image_text_chars": {
+  "mean": 43.58,
+  "median": 37.0,
+  "hist": {
+   "1-10": 167,
+   "11-20": 1179,
+   "21-40": 4394,
+   "41-80": 3161,
+   "81-120": 1093,
+   "121+": 6
+  }
+ },
+ "font_size_px": {
+  "min": 12,
+  "median": 52,
+  "max": 260,
+  "hist": {
+   "12-17": 95,
+   "18-23": 1294,
+   "24-31": 3309,
+   "32-47": 10437,
+   "48-71": 9414,
+   "72-119": 6617,
+   "120-199": 3954,
+   "200+": 323
+  }
+ },
+ "scenes": {
+  "book_cover": 1691,
+  "notice": 1682,
+  "menu": 1677,
+  "poster": 1653,
+  "sign": 1651,
+  "product_label": 1646
+ },
+ "font_styles": {
+  "display": 8859,
+  "myeongjo": 6635,
+  "gothic": 6511,
+  "handwriting": 6402,
+  "rounded": 3901,
+  "brush": 3135
+ },
+ "font_families": {
+  "Dongle": 1034,
+  "Moirai One": 1014,
+  "Black And White Picture": 1006,
+  "Black Han Sans": 1006,
+  "Gowun Dodum": 1004,
+  "Gasoek One": 1001,
+  "Bagel Fat One": 1001,
+  "Gowun Batang": 1000,
+  "Orbit": 981,
+  "Noto Serif KR": 978,
+  "Do Hyeon": 975,
+  "Nanum Gothic": 974,
+  "Hahmlet": 970,
+  "Pretendard": 953,
+  "Poor Story": 947,
+  "Hi Melody": 945,
+  "Yeon Sung": 944,
+  "Stylish": 944,
+  "Noto Sans KR": 940,
+  "Grandiflora One": 937,
+  "Diphylleia": 937,
+  "Gugi": 931,
+  "Gamja Flower": 930,
+  "Nanum Myeongjo": 928,
+  "Nanum Gothic Coding": 924,
+  "Jua": 919,
+  "Cute Font": 919,
+  "Gothic A1": 911,
+  "Sunflower": 907,
+  "Gaegu": 905,
+  "IBM Plex Sans KR": 902,
+  "Song Myung": 885,
+  "Nanum Pen Script": 882,
+  "Single Day": 874,
+  "Kirang Haerang": 829,
+  "East Sea Dokdo": 786,
+  "Dokdo": 780,
+  "Nanum Brush Script": 740
+ },
+ "font_families_used": 38,
+ "font_licenses": {
+  "OFL-1.1": 35443
+ },
+ "backgrounds": {
+  "photo:texture": 4203,
+  "photo:hdri_crop": 2266,
+  "procedural:paper": 744,
+  "procedural:wood": 712,
+  "procedural:solid": 708,
+  "procedural:metal": 698,
+  "procedural:gradient": 669
+ },
+ "background_licenses": {
+  "CC0-1.0": 10000
+ },
+ "distinct_photo_backgrounds_used": 507,
+ "plan_info": {
+  "natural_counts_min_ks": 0,
+  "ks_below_n_before_coverage": 1819,
+  "coverage_words_added": 18361,
+  "ks_held_out_as_words": [
+   "삯",
+   "홰"
+  ],
+  "ks_below_n_after": 0,
+  "stage2_below_n2_after": 0
+ }
+}

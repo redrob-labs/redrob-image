@@ -1,0 +1,59 @@
+# Glyph pilot ch2: ch1 (glyph latent on extra input channels) + captions with the text hidden.
+# The ch1 swap test at step 5245 drew the PROMPT text 10/10: prompt and glyph always agreed, so the model never
+# needed the glyph. Here 60% of glyph samples get a caption whose quoted text is "*" (AnyText), so the glyph is the
+# only place that text can come from. Starts from ch1 step 5400 (LoRA + glyph projection), new optimizer.
+# HF_HOME=~/hf python scripts/train_lora.py --config configs/g6e-glyph-ch2.yaml --run ~/runs/pilot-glyph-ch2
+model: Tongyi-MAI/Z-Image
+precomp: ~/data/precomp-glyph
+init_lora: ~/runs/pilot-glyph-ch1/ckpt/step-5400/pytorch_lora_weights.safetensors
+s3: ""
+seed: 0
+mix:
+  aihub105: 20000
+  synth: 20000
+variants: [ko_long, ko_short, en]
+caption_dropout: 0.1
+gradient_checkpointing: true
+glyph:
+  enabled: true
+  mode: channel
+  dropout: 0.15                  # share of batches trained with a zero glyph
+  proj_lr_mult: 1.0
+  init_proj: ~/runs/pilot-glyph-ch1/ckpt/step-5400/glyph_proj.safetensors
+  mask_caption: 0.6               # share of glyph samples whose caption text is hidden behind "*" (precompute_mtxt.py)
+lora:
+  rank: 64
+  alpha: 64
+  targets: [to_q, to_k, to_v, to_out.0, feed_forward.w1, feed_forward.w2, feed_forward.w3]
+loss:
+  text_weight: 5.0
+timesteps:
+  dist: logit_normal
+  mean: 0.0
+  std: 1.0
+optim:
+  lr: 1.0e-4
+  warmup: 100
+  max_grad_norm: 1.0
+stages:
+  - {res: 512, batch: 8, epochs: 1, steps: 3000, min_text_px: 16}
+  - {res: 1024, batch: 2, steps: 1500}
+ckpt_minutes: 30
+val:
+  precomp: ~/data/precomp-val-glyph
+  glyph: channel
+  res: 512
+  every: 1000
+  max_per_source: 128
+  levels: 8
+  seed: 1234
+  variant: ko_long
+eval:
+  every: 1000
+  glyph: channel
+  prompts: [eval/prompts.jsonl]
+  subset: 40
+  seeds: [42]
+  resolution: 1024
+  steps: 28
+  guidance: 4.0
