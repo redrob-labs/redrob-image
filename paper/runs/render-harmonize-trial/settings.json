@@ -1,0 +1,21 @@
+{
+ "model": "Tongyi-MAI/Z-Image",
+ "steps": 28,
+ "guidance": 4.0,
+ "resolution": 1024,
+ "seed": 42,
+ "strengths": [
+  0.3,
+  0.5,
+  0.7
+ ],
+ "pads": [
+  16,
+  48
+ ],
+ "blank": "아무 글자도 없는 깨끗한 빈 면",
+ "negative": "글자, 문자, 텍스트, 숫자, 로고, 워터마크",
+ "n_prompts": 20,
+ "n_harmonized": 120,
+ "wall_sec": 8773.236444473267
+}

@@ -133,6 +133,7 @@ def main() -> int:
         (out / c / "images").mkdir(parents=True, exist_ok=True)
 
     pipe = ZImagePipeline.from_pretrained(a.model, torch_dtype=torch.bfloat16, low_cpu_mem_usage=False).to("cuda")
+    pipe.vae.enable_tiling()  # the 1024px inpaint decode ran out of the 44 GB card without it
     inp = ZImageInpaintPipeline.from_pipe(pipe)
     R = a.resolution
     kw = dict(height=R, width=R, num_inference_steps=a.steps, guidance_scale=a.guidance)
@@ -162,6 +163,7 @@ def main() -> int:
                 # strokes and everything outside the band come back pixel-exact
                 Image.composite(h.resize(comp.size), comp, soft).save(op)
                 n += 1
+                torch.cuda.empty_cache()
         print(f"{i + 1}/{len(rows)} {r['id']} {time.time() - t0:.0f}s", flush=True)
     (out / "settings.json").write_text(json.dumps(dict(
         model=a.model, steps=a.steps, guidance=a.guidance, resolution=R, seed=a.seed, strengths=a.strengths,
