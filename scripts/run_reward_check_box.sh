@@ -4,6 +4,7 @@
 set -uo pipefail
 cd "$(dirname "$0")/.."
 export HF_HOME=${HF_HOME:-$HOME/hf}
+export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 PY=${PY:-$HOME/redrob-image-venv/bin/python}
 OUT=${OUT:-$HOME/runs/reward-check}
 step() { echo "== $* $(date -u +%FT%TZ)"; "$@" || { echo "FAILED: $*"; exit 1; }; }

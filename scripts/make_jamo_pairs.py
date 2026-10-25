@@ -163,6 +163,7 @@ def main() -> int:
             scene = pipe(prompt=blank_prompt(r["prompt_ko"]), negative_prompt=NEG_TEXT,
                          generator=torch.Generator("cuda").manual_seed(a.seed), **kw).images[0]
             scene.save(sp)
+            torch.cuda.empty_cache()  # the first inpaint decode ran out of the card right after a scene
         harmonize(scene, r, r["target_text"], out / "images" / "good" / f"{r['id']}.png")
         for p in by_prompt.get(r["id"], []):
             harmonize(scene, r, p["wrong"], out / "images" / "bad" / f"{p['pair_id']}.png")
