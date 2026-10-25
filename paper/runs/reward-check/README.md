@@ -20,3 +20,23 @@ score model-drawn images.
 
 Files: check.json (v1), check-v5.json (v5 run; its stored total used the earlier v5 weights, 0.869),
 scripts/reward.py.
+
+## Syllable classifier (v6, v7): PASS
+
+A ResNet-18 that knows all 11,172 syllables, trained on 34 OFL fonts (scripts/syllable_cls.py,
+scripts/fetch_ko_fonts.sh). Score = mean log P(target syllable) over the cells, declared before the run.
+Noto Sans KR, the font the pairs are drawn in, is never in training.
+
+| version | training backgrounds | right | vowel | tense | initial | final | unseen syllable | right image read exactly |
+|---|---|---:|---:|---:|---:|---:|---:|---:|
+| v6 | clean (procedural) | 0.954 | 0.954 | 0.958 | 0.939 | 0.962 | 1.000 | 0.392 |
+| v7 | + real photo patches, edge clutter, outlines | **0.998** | 1.000 | 1.000 | 0.990 | 1.000 | 1.000 | 0.890 |
+
+- v6 passed the 95% line but read only 39% of the right images exactly: it misread cells with sign borders
+  and scene texture at the edges. v7 adds those to training.
+- The v7 changes were chosen after looking at 40 of the 100 prompts. On the other 60 prompts (298 pairs) v7
+  ranks 100% right and reads 83% of right images exactly.
+- One pair is still wrong (넙치/넙지): both read 넙치 with the same score.
+- These are font composites. Model-drawn images still need a check against human labels (r64 v2 sheet).
+
+Files: check-v6cls.json, check-v7cls.json, fails-v7cls.json.
