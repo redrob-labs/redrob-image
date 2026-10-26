@@ -38,7 +38,7 @@
    "easyocr": "1.7.2"
   },
   "gpu": "NVIDIA L40S",
-  "host": "ip-172-31-1-46",
+  "host": "gpu-box",
   "started": "2026-10-24T07:12:45+0000",
   "wall_sec": 374.2876808643341
  },
