@@ -13,3 +13,4 @@ One row per task. "Human" is what a person decided, wrote, or checked.
 | 2026-10-19 | Kiro Crew (kiro-cli) | claude-opus-5.5 | AI Hub 105 pilot download and extraction scripts | infra/aihub_*.{sh,py} | Janghoon Lee applied for AI Hub access, issued the key and ran the Korean exit node |
 | 2026-10-20 | Kiro Crew (kiro-cli) | claude-opus-5.5 | T4: AI Hub 105 parser (pairing, filters, crop search, shards) and stats report | scripts/aihub105_*.py, paper/data-stats/aihub105-pilot.* | - |
 | 2026-10-20 | Kiro Crew (kiro-cli) | claude-opus-5.5 | T5: Qwen3-VL caption pipeline (scene/style only; label text inserted by code), 1k run | scripts/caption.py, paper/data-stats/captions-1k.json | - |
+| 2026-10-26 | Kiro Crew (kiro-cli) | claude-opus-5.5 | Draft summary of all experiment results for paper writing (numbers copied from paper/runs) | paper/results-summary.md | Janghoon Lee asked for it; judged the plan B and human-check images by eye |
