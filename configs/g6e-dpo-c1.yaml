@@ -1,0 +1,31 @@
+# Plan C stage 1: region Diffusion-DPO starting from the r64 v2 LoRA (docs/reward-training-plan.md).
+# Pairs: scripts/dpo_pairs.py over the 2,000-prompt rollout (best vs worst classifier reward per prompt).
+# HF_HOME=~/hf python scripts/train_dpo.py --config configs/g6e-dpo-c1.yaml --run ~/runs/dpo-c1
+model: Tongyi-MAI/Z-Image
+pairs: ~/data/dpo-c1
+init_lora: ~/runs/pilot-r64v2/final/pytorch_lora_weights.safetensors
+s3: ""
+seed: 0
+gradient_checkpointing: true
+lora:                            # must match the r64 v2 run
+  rank: 64
+  alpha: 64
+  targets: [to_q, to_k, to_v, to_out.0, feed_forward.w1, feed_forward.w2, feed_forward.w3]
+loss:
+  text_weight: 5.0               # latent cells in the pair's text region count 5x, as in r64 v2
+timesteps:
+  dist: logit_normal
+  mean: 0.0
+  std: 1.0
+dpo:
+  beta: 2000                     # Wallace et al. used 2500-5000 for SD; first run, check val pref_acc
+  sft_weight: 0.0
+optim:
+  lr: 1.0e-5
+  accum: 8                       # pairs per optimizer step
+  warmup: 20
+  max_grad_norm: 1.0
+epochs: 2
+ckpt_minutes: 30
+val:
+  every: 50
