@@ -1,0 +1,235 @@
+{
+ "summary": {
+  "n": 20,
+  "human_right": 7,
+  "cls_right": 5,
+  "agree": 18,
+  "both_right": 5,
+  "cls_right_human_wrong": 0,
+  "human_right_cls_wrong": 2,
+  "reward_auc": 0.714,
+  "dual_ocr_agree": 19
+ },
+ "items": [
+  {
+   "n": 1,
+   "target": "빵집",
+   "split": "seen",
+   "human": true,
+   "cls": false,
+   "reward": -28.526,
+   "read_aligned": "빵",
+   "extra_cells": 15,
+   "dual_em": true
+  },
+  {
+   "n": 2,
+   "target": "신선한 과일 채소",
+   "split": "seen",
+   "human": true,
+   "cls": false,
+   "reward": -4.513,
+   "read_aligned": "신션한과일채소",
+   "extra_cells": 10,
+   "dual_em": true
+  },
+  {
+   "n": 3,
+   "target": "똌붟둾",
+   "split": "unseen_syllable",
+   "human": false,
+   "cls": false,
+   "reward": -13.592,
+   "read_aligned": "팅쁥딹",
+   "extra_cells": 2,
+   "dual_em": false
+  },
+  {
+   "n": 4,
+   "target": "윤슬공방",
+   "split": "unseen",
+   "human": true,
+   "cls": true,
+   "reward": -0.059,
+   "read_aligned": "윤슬공방",
+   "extra_cells": 0,
+   "dual_em": true
+  },
+  {
+   "n": 5,
+   "target": "식당",
+   "split": "seen",
+   "human": true,
+   "cls": true,
+   "reward": -0.041,
+   "read_aligned": "식당",
+   "extra_cells": 0,
+   "dual_em": true
+  },
+  {
+   "n": 6,
+   "target": "펮쑔",
+   "split": "unseen_syllable",
+   "human": false,
+   "cls": false,
+   "reward": -10.48,
+   "read_aligned": "죔슮",
+   "extra_cells": 0,
+   "dual_em": false
+  },
+  {
+   "n": 7,
+   "target": "꾔마을",
+   "split": "unseen_syllable",
+   "human": false,
+   "cls": false,
+   "reward": -21.354,
+   "read_aligned": "꼭마을",
+   "extra_cells": 17,
+   "dual_em": false
+  },
+  {
+   "n": 8,
+   "target": "황새울목공방",
+   "split": "unseen",
+   "human": false,
+   "cls": false,
+   "reward": -19.389,
+   "read_aligned": "황울믁방",
+   "extra_cells": 28,
+   "dual_em": false
+  },
+  {
+   "n": 9,
+   "target": "여름 신상품 입고",
+   "split": "seen",
+   "human": true,
+   "cls": true,
+   "reward": -3.055,
+   "read_aligned": "여름신상품입고",
+   "extra_cells": 7,
+   "dual_em": true
+  },
+  {
+   "n": 10,
+   "target": "쁷학교",
+   "split": "unseen_syllable",
+   "human": false,
+   "cls": false,
+   "reward": -6.384,
+   "read_aligned": "똦항교",
+   "extra_cells": 0,
+   "dual_em": false
+  },
+  {
+   "n": 11,
+   "target": "너와집",
+   "split": "unseen",
+   "human": true,
+   "cls": true,
+   "reward": -0.049,
+   "read_aligned": "너와집",
+   "extra_cells": 0,
+   "dual_em": true
+  },
+  {
+   "n": 12,
+   "target": "안경원",
+   "split": "seen",
+   "human": false,
+   "cls": false,
+   "reward": -2.021,
+   "read_aligned": "안겅원",
+   "extra_cells": 0,
+   "dual_em": true
+  },
+  {
+   "n": 13,
+   "target": "너럭바위찻집",
+   "split": "unseen",
+   "human": false,
+   "cls": false,
+   "reward": -19.552,
+   "read_aligned": "너류곪이즈이",
+   "extra_cells": 26,
+   "dual_em": false
+  },
+  {
+   "n": 14,
+   "target": "툟상회",
+   "split": "unseen_syllable",
+   "human": false,
+   "cls": false,
+   "reward": -3.889,
+   "read_aligned": "투상회",
+   "extra_cells": 0,
+   "dual_em": false
+  },
+  {
+   "n": 15,
+   "target": "짚신",
+   "split": "unseen",
+   "human": false,
+   "cls": false,
+   "reward": -5.914,
+   "read_aligned": "찝신",
+   "extra_cells": 0,
+   "dual_em": false
+  },
+  {
+   "n": 16,
+   "target": "뙈기",
+   "split": "unseen",
+   "human": false,
+   "cls": false,
+   "reward": -4.555,
+   "read_aligned": "푀기",
+   "extra_cells": 0,
+   "dual_em": false
+  },
+  {
+   "n": 17,
+   "target": "안전을 위해 손잡이를 잡아 주세요",
+   "split": "seen",
+   "human": false,
+   "cls": false,
+   "reward": -7.44,
+   "read_aligned": "안진을위해손짭이를잡아주세요",
+   "extra_cells": 30,
+   "dual_em": false
+  },
+  {
+   "n": 18,
+   "target": "휴무",
+   "split": "seen",
+   "human": true,
+   "cls": true,
+   "reward": -21.065,
+   "read_aligned": "휴무",
+   "extra_cells": 14,
+   "dual_em": true
+  },
+  {
+   "n": 19,
+   "target": "똬리",
+   "split": "unseen",
+   "human": false,
+   "cls": false,
+   "reward": -26.774,
+   "read_aligned": "탸괴",
+   "extra_cells": 14,
+   "dual_em": false
+  },
+  {
+   "n": 20,
+   "target": "셎듹뵃",
+   "split": "unseen_syllable",
+   "human": false,
+   "cls": false,
+   "reward": -21.514,
+   "read_aligned": "푯티매",
+   "extra_cells": 12,
+   "dual_em": false
+  }
+ ]
+}
