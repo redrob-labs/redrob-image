@@ -10,7 +10,8 @@ export HF_HOME=${HF_HOME:-$HOME/hf}
 export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 ROLL="$HOME/runs/c1-rollout"
 PAIRS="$HOME/data/dpo-c1"
-RUN="$HOME/runs/dpo-c1"
+CFG=${CFG:-configs/g6e-dpo-c1.yaml}   # c2: CFG=configs/g6e-dpo-c2.yaml RUN=~/runs/dpo-c2
+RUN=${RUN:-$HOME/runs/dpo-c1}
 step() { echo "== $(date -u +%FT%TZ) $*"; "$@"; }
 
 until grep -q "C1 ROLLOUT DONE N=0" "$HOME/runs/c1-rollout-full.log" 2>/dev/null; do sleep 300; done
@@ -23,7 +24,7 @@ echo "DPO SMOKE OK $(date -u +%FT%TZ)"
 
 echo "waiting for ~/runs/dpo-go (human check) $(date -u +%FT%TZ)"
 until [ -f "$HOME/runs/dpo-go" ]; do sleep 300; done
-[ -f "$RUN/summary.json" ] || step $PY scripts/train_dpo.py --config configs/g6e-dpo-c1.yaml --run "$RUN"
+[ -f "$RUN/summary.json" ] || step $PY scripts/train_dpo.py --config "$CFG" --run "$RUN"
 
 E="$RUN/final-eval-Z-Image"
 [ -f "$E/report.json" ] || step $PY scripts/eval_baseline.py --model Tongyi-MAI/Z-Image --steps 28 --guidance 4 \
@@ -33,4 +34,8 @@ E="$RUN/final-eval-Z-Image"
 for d in "$E" "$HOME/runs/pilot-r64v2/final-eval-Z-Image"; do
     [ -f "$d/rewards_cls.jsonl" ] || step $PY scripts/reward_cls.py score --images "$d" --model "$HOME/runs/syl-cls-v2/model.pt"
 done
+# the same 8 prompts as the c1 peeks, for a side-by-side sheet
+[ -f "$RUN/peek-final/report.json" ] || step $PY scripts/eval_baseline.py --model Tongyi-MAI/Z-Image --steps 28 --guidance 4 \
+    --prompts eval/prompts.jsonl eval/prompts_unseen_syllables.jsonl --subset 8 --ocr paddleocr \
+    --lora "$RUN/final/pytorch_lora_weights.safetensors" --out "$RUN/peek-final"
 echo "DPO CHAIN DONE $(date -u +%FT%TZ)"
