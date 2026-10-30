@@ -85,7 +85,24 @@ def generate(a, rows, img_dir: Path) -> dict:
     if not todo:
         return info
     t0 = time.time()
-    pipe = ZImagePipeline.from_pretrained(a.model, torch_dtype=torch.bfloat16, low_cpu_mem_usage=False).to("cuda")
+    qwen = "Qwen-Image" in a.model
+    if qwen:
+        # base-model comparison: Qwen-Image (20B). Same fit as rerender.py: transformer on the GPU with fp8
+        # storage (bf16 compute) next to the 17 GB text encoder.
+        from diffusers import QwenImagePipeline, QwenImageTransformer2DModel
+
+        tr = QwenImageTransformer2DModel.from_pretrained(a.model, subfolder="transformer", torch_dtype=torch.bfloat16,
+                                                         device_map="cuda")
+        tr.enable_layerwise_casting(storage_dtype=torch.float8_e4m3fn, compute_dtype=torch.bfloat16)
+        torch.cuda.empty_cache()
+        pipe = QwenImagePipeline.from_pretrained(a.model, transformer=tr, torch_dtype=torch.bfloat16)
+        if a.offload:
+            pipe.enable_model_cpu_offload()
+        else:
+            pipe.to("cuda")
+        pipe.vae.enable_tiling()
+    else:
+        pipe = ZImagePipeline.from_pretrained(a.model, torch_dtype=torch.bfloat16, low_cpu_mem_usage=False).to("cuda")
     if a.lora:
         # a LoRA trained on Base can be applied to any Z-Image transformer (Base, Turbo, our own)
         pipe.load_lora_weights(a.lora, adapter_name="ko")
@@ -102,7 +119,11 @@ def generate(a, rows, img_dir: Path) -> dict:
         pipe.transformer.all_x_embedder[G.EMB_KEY].proj.to(torch.bfloat16)
     info["load_sec"] = time.time() - t0
     kw = dict(height=a.resolution, width=a.resolution, num_inference_steps=a.steps, guidance_scale=a.guidance)
-    if a.guidance > 0:
+    if qwen:
+        # Qwen-Image's CFG is true_cfg_scale and needs a negative prompt; guidance_scale is for distilled models
+        kw = dict(height=a.resolution, width=a.resolution, num_inference_steps=a.steps, true_cfg_scale=a.guidance,
+                  negative_prompt=a.negative or " ")
+    elif a.guidance > 0:
         kw.update(negative_prompt=a.negative, cfg_normalization=a.cfg_normalization)
     secs = []
     if a.glyph:
@@ -183,6 +204,7 @@ def main() -> None:
     ap.add_argument("--out", required=True)
     ap.add_argument("--lora", default="", help="LoRA .safetensors (or dir) to load into the pipeline")
     ap.add_argument("--lora-scale", type=float, default=1.0)
+    ap.add_argument("--offload", action="store_true", help="Qwen-Image: model CPU offload if it does not fit")
     ap.add_argument("--glyph", action="store_true",
                     help="condition on a glyph map of target_text at the default scene layout (scripts/glyph.py)")
     ap.add_argument("--glyph-mode", choices=["omni", "channel"], default="omni",
