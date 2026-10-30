@@ -1,0 +1,71 @@
+{
+  "name": "aihub633-packaging",
+  "source": "AI Hub 633 (의약품, 화장품 패키징 OCR), labels + validation images + Training images 1; max 8 crops per image",
+  "settings": {
+    "train_res": "512",
+    "min_text_px": "20",
+    "min_crop": "384",
+    "crop_margin": "1.3",
+    "ignore_text_px": "8",
+    "crop_max_side": "1024",
+    "full_max_side": "1600",
+    "full_check_res": "1024"
+  },
+  "source_images_kept": 62613,
+  "source_images_with_full_sample": 40718,
+  "samples": {
+    "train/crop": 223807,
+    "train/full": 27065,
+    "val/crop": 102528,
+    "val/full": 13653
+  },
+  "samples_by_category": {
+    "cosmetics/crop": 47008,
+    "cosmetics/full": 6897,
+    "medicine/crop": 279327,
+    "medicine/full": 33821
+  },
+  "crop_share": 0.889,
+  "drops": {
+    "image_not_downloaded": 40607,
+    "duplicate_md5": 322,
+    "duplicate_dhash": 281,
+    "full_skipped_unlabeled_text": 22333,
+    "unseen": 43,
+    "no_usable_sample": 438,
+    "full_skipped_bad_bbox": 895,
+    "crops_skipped_bad_bbox": 895,
+    "no_readable_text": 13,
+    "size_mismatch": 4
+  },
+  "train_text_blocks_by_syllables": {
+    "0": 558998,
+    "1-2": 671964,
+    "3-5": 869489,
+    "6-10": 165365,
+    "11+": 19316
+  },
+  "train_text_blocks_without_hangul": 558998,
+  "train_blocks_per_sample": {
+    "1": 56770,
+    "2": 54873,
+    "3": 33715,
+    "4": 29982,
+    "5": 14883,
+    "6": 12477,
+    "7": 8308,
+    "8": 7427,
+    "9": 4123,
+    "10+": 28314
+  },
+  "syllables_distinct": 1263,
+  "syllables_outside_ks": 42,
+  "ks2350_covered": 1221,
+  "ks2350_with_at_least": {
+    "1": 1221,
+    "5": 1049,
+    "20": 886,
+    "100": 685
+  },
+  "syllable_occurrences": 4613025
+}

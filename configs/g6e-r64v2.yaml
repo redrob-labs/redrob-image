@@ -1,0 +1,52 @@
+# Pilot LoRA r64 v2: the r32 run drew syllable layouts but left out the strokes that make a vowel readable
+# (깨 -> 꺼, 게 -> 계). Four changes against configs/g6e.yaml, all aimed at fine glyph detail:
+#   1. LoRA on attention + FFN (SwiGLU w1/w2/w3), rank 64
+#   2. loss up-weighted inside text boxes (precompute.py <i>.mask, latent grid)
+#   3. timesteps from a logit-normal (SD3, Esser et al. 2024) instead of the shifted scheduler grid, which puts
+#      most steps at high noise where strokes are not learned
+#   4. text smaller than 16 px at 512 is kept out of the 512 stage, and the 1024 stage is twice as long
+# HF_HOME=~/hf python scripts/train_lora.py --config configs/g6e-r64v2.yaml --run ~/runs/pilot-r64v2
+model: Tongyi-MAI/Z-Image
+precomp: ~/data/precomp-v2       # precompute.py with text masks (512 all, 1024 6000 per source)
+s3: ""
+seed: 0
+mix:
+  aihub105: 20000
+  synth: 20000
+variants: [ko_long, ko_short, en]
+caption_dropout: 0.1
+gradient_checkpointing: true
+lora:
+  rank: 64
+  alpha: 64
+  targets: [to_q, to_k, to_v, to_out.0, feed_forward.w1, feed_forward.w2, feed_forward.w3]
+loss:
+  text_weight: 5.0               # latent cells under a text box count 5x
+timesteps:
+  dist: logit_normal
+  mean: 0.0
+  std: 1.0
+optim:
+  lr: 1.0e-4
+  warmup: 100
+  max_grad_norm: 1.0
+stages:
+  - {res: 512, batch: 8, epochs: 2, min_text_px: 16}
+  - {res: 1024, batch: 2, steps: 3000}
+ckpt_minutes: 30
+val:
+  precomp: ~/data/precomp-val
+  res: 512
+  every: 1000
+  max_per_source: 128
+  levels: 8
+  seed: 1234
+  variant: ko_long
+eval:
+  every: 2500
+  prompts: [eval/prompts.jsonl]
+  subset: 40
+  seeds: [42]
+  resolution: 1024
+  steps: 28
+  guidance: 4.0

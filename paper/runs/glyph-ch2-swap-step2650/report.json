@@ -1,0 +1,153 @@
+{
+ "meta": {
+  "model": "Tongyi-MAI/Z-Image",
+  "steps": 28,
+  "guidance": 4.0,
+  "negative_prompt": "",
+  "glyph": true,
+  "cfg_normalization": false,
+  "resolution": 1024,
+  "seeds": [
+   42
+  ],
+  "lang": "ko",
+  "prompts": [
+   "/home/ubuntu/runs/glyph-ch2-swap-mid/prompts_swap.jsonl"
+  ],
+  "subset": 0,
+  "n_prompts": 10,
+  "n_images": 10,
+  "dtype": "bfloat16",
+  "ocr": "dual",
+  "ocr_sec_per_image": 0.6893455743789673,
+  "ocr_load_sec": 148.13197946548462,
+  "generation": {
+   "generated": 10,
+   "sec_per_image": 34.022952715555824,
+   "load_sec": 10.902501583099365,
+   "first_image_sec": 34.43546104431152,
+   "peak_mem_gb": 22.032642364501953
+  },
+  "git_commit": "unknown",
+  "packages": {
+   "python": "3.12.3",
+   "torch": "2.11.0+cu128",
+   "diffusers": "0.42.0.dev0",
+   "transformers": "5.20.1",
+   "accelerate": "1.15.0",
+   "easyocr": "1.7.2"
+  },
+  "gpu": "NVIDIA L40S",
+  "host": "gpu-box",
+  "started": "2026-10-24T05:54:07+0000",
+  "wall_sec": 516.0756886005402
+ },
+ "metrics": {
+  "overall": {
+   "n": 10,
+   "cer": 1.0,
+   "cer_nospace": 1.0,
+   "em": 0.0
+  },
+  "split": {
+   "seen": {
+    "n": 6,
+    "cer": 1.0,
+    "cer_nospace": 1.0,
+    "em": 0.0
+   },
+   "unseen": {
+    "n": 4,
+    "cer": 1.0,
+    "cer_nospace": 1.0,
+    "em": 0.0
+   }
+  },
+  "bucket": {
+   "1-2": {
+    "n": 4,
+    "cer": 1.0,
+    "cer_nospace": 1.0,
+    "em": 0.0
+   },
+   "3-5": {
+    "n": 4,
+    "cer": 1.0,
+    "cer_nospace": 1.0,
+    "em": 0.0
+   },
+   "6-10": {
+    "n": 2,
+    "cer": 1.0,
+    "cer_nospace": 1.0,
+    "em": 0.0
+   }
+  },
+  "scene": {
+   "poster": {
+    "n": 3,
+    "cer": 1.0,
+    "cer_nospace": 1.0,
+    "em": 0.0
+   },
+   "product_label": {
+    "n": 1,
+    "cer": 1.0,
+    "cer_nospace": 1.0,
+    "em": 0.0
+   },
+   "signboard": {
+    "n": 6,
+    "cer": 1.0,
+    "cer_nospace": 1.0,
+    "em": 0.0
+   }
+  },
+  "has_unseen_syllable": {
+   "False": {
+    "n": 10,
+    "cer": 1.0,
+    "cer_nospace": 1.0,
+    "em": 0.0
+   }
+  },
+  "split_bucket": {
+   "seen/1-2": {
+    "n": 3,
+    "cer": 1.0,
+    "cer_nospace": 1.0,
+    "em": 0.0
+   },
+   "seen/3-5": {
+    "n": 2,
+    "cer": 1.0,
+    "cer_nospace": 1.0,
+    "em": 0.0
+   },
+   "seen/6-10": {
+    "n": 1,
+    "cer": 1.0,
+    "cer_nospace": 1.0,
+    "em": 0.0
+   },
+   "unseen/1-2": {
+    "n": 1,
+    "cer": 1.0,
+    "cer_nospace": 1.0,
+    "em": 0.0
+   },
+   "unseen/3-5": {
+    "n": 2,
+    "cer": 1.0,
+    "cer_nospace": 1.0,
+    "em": 0.0
+   },
+   "unseen/6-10": {
+    "n": 1,
+    "cer": 1.0,
+    "cer_nospace": 1.0,
+    "em": 0.0
+   }
+  }
+ }
+}

@@ -1,0 +1,40 @@
+{
+ "model": "Tongyi-MAI/Z-Image",
+ "steps": 28,
+ "guidance": 4.0,
+ "negative_prompt": "",
+ "glyph": false,
+ "cfg_normalization": false,
+ "resolution": 1024,
+ "seeds": [
+  42
+ ],
+ "lang": "ko",
+ "prompts": [
+  "/home/ubuntu/runs/rerender-trial/prompts.jsonl"
+ ],
+ "subset": 0,
+ "n_prompts": 20,
+ "n_images": 20,
+ "dtype": "bfloat16",
+ "ocr": "dual",
+ "ocr_sec_per_image": 0.6673855185508728,
+ "ocr_load_sec": 9.531129360198975,
+ "generation": {
+  "generated": 0,
+  "sec_per_image": null
+ },
+ "git_commit": "unknown",
+ "packages": {
+  "python": "3.12.3",
+  "torch": "2.11.0+cu128",
+  "diffusers": "0.42.0.dev0",
+  "transformers": "5.20.1",
+  "accelerate": "1.15.0",
+  "easyocr": "1.7.2"
+ },
+ "gpu": "NVIDIA L40S",
+ "host": "gpu-box",
+ "started": "2026-10-24T18:21:21+0000",
+ "wall_sec": 36.95339345932007
+}

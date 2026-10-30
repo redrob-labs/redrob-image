@@ -1,0 +1,38 @@
+{
+  "name": "captions-1k",
+  "model": "Qwen/Qwen3-VL-8B-Instruct",
+  "samples": 1000,
+  "by_kind": {
+    "crop": 500,
+    "full": 500
+  },
+  "by_category": {
+    "간판": 500,
+    "책표지": 500
+  },
+  "vlm_json_parsed": 1000,
+  "fallbacks": {
+    "scene_en:label_text": 1,
+    "scene_en:quote": 27,
+    "scene_en:too_long": 1,
+    "scene_ko:label_text": 6,
+    "scene_ko:quote": 10,
+    "scene_short_ko:label_text": 18,
+    "style_en:empty": 41,
+    "style_ko:empty": 41
+  },
+  "label_text_missing_from_caption": 0,
+  "caption_chars_median": {
+    "ko_long": 118,
+    "ko_short": 27,
+    "en": 210
+  },
+  "vlm_seconds_this_run": 1105.4,
+  "vlm_images_this_run": 1000,
+  "vlm_seconds_per_image": 1.11,
+  "settings": {
+    "batch": 16,
+    "max_side": 768,
+    "seed": 0
+  }
+}

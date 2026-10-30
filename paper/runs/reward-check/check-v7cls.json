@@ -1,0 +1,64 @@
+{
+ "overall": {
+  "cls_mean": 0.998,
+  "cls_min": 1.0,
+  "good_read_exact": 0.89,
+  "n": 498
+ },
+ "kind=final": {
+  "cls_mean": 1.0,
+  "cls_min": 1.0,
+  "good_read_exact": 0.908,
+  "n": 130
+ },
+ "kind=initial": {
+  "cls_mean": 0.99,
+  "cls_min": 1.0,
+  "good_read_exact": 0.919,
+  "n": 99
+ },
+ "kind=tense": {
+  "cls_mean": 1.0,
+  "cls_min": 1.0,
+  "good_read_exact": 0.854,
+  "n": 96
+ },
+ "kind=vowel": {
+  "cls_mean": 1.0,
+  "cls_min": 1.0,
+  "good_read_exact": 0.879,
+  "n": 173
+ },
+ "split=seen": {
+  "cls_mean": 1.0,
+  "cls_min": 1.0,
+  "good_read_exact": 0.907,
+  "n": 215
+ },
+ "split=unseen": {
+  "cls_mean": 0.995,
+  "cls_min": 1.0,
+  "good_read_exact": 0.874,
+  "n": 198
+ },
+ "split=unseen_syllable": {
+  "cls_mean": 1.0,
+  "cls_min": 1.0,
+  "good_read_exact": 0.882,
+  "n": 85
+ },
+ "has_unseen_syllable=False": {
+  "cls_mean": 0.998,
+  "cls_min": 1.0,
+  "good_read_exact": 0.891,
+  "n": 413
+ },
+ "has_unseen_syllable=True": {
+  "cls_mean": 1.0,
+  "cls_min": 1.0,
+  "good_read_exact": 0.882,
+  "n": 85
+ },
+ "pass": true,
+ "score": "cls_mean (declared before the run; nothing tuned on these pairs)"
+}

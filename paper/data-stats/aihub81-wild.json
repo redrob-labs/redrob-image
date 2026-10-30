@@ -1,0 +1,71 @@
+{
+  "name": "aihub81-wild",
+  "source": "AI Hub 105 (야외 실제 촬영 한글 이미지), pilot subset",
+  "settings": {
+    "train_res": "512",
+    "min_text_px": "20",
+    "min_crop": "384",
+    "crop_margin": "1.3",
+    "ignore_text_px": "8",
+    "crop_max_side": "1024",
+    "full_max_side": "1600",
+    "full_check_res": "1024"
+  },
+  "source_images_kept": 85857,
+  "source_images_with_full_sample": 29016,
+  "samples": {
+    "train/crop": 177915,
+    "train/full": 29016
+  },
+  "samples_by_category": {
+    "book/crop": 34012,
+    "book/full": 1301,
+    "product/crop": 40194,
+    "product/full": 8889,
+    "sign/crop": 55566,
+    "sign/full": 10777,
+    "traffic_sign/crop": 48143,
+    "traffic_sign/full": 8049
+  },
+  "crop_share": 0.86,
+  "drops": {
+    "duplicate_md5": 709,
+    "duplicate_dhash": 222,
+    "full_skipped_unlabeled_text": 69807,
+    "no_usable_sample": 12966,
+    "full_skipped_bad_bbox": 408,
+    "crops_skipped_bad_bbox": 408,
+    "unseen": 44,
+    "no_readable_text": 10
+  },
+  "train_text_blocks_by_syllables": {
+    "0": 249545,
+    "1-2": 118195,
+    "3-5": 134959,
+    "6-10": 9456,
+    "11+": 57
+  },
+  "train_text_blocks_without_hangul": 249545,
+  "train_blocks_per_sample": {
+    "1": 81122,
+    "2": 52104,
+    "3": 30491,
+    "4": 18104,
+    "5": 10048,
+    "6": 5782,
+    "7": 3518,
+    "8": 2279,
+    "9": 1628,
+    "10+": 1855
+  },
+  "syllables_distinct": 1523,
+  "syllables_outside_ks": 34,
+  "ks2350_covered": 1489,
+  "ks2350_with_at_least": {
+    "1": 1489,
+    "5": 1178,
+    "20": 883,
+    "100": 512
+  },
+  "syllable_occurrences": 489539
+}

@@ -1,0 +1,52 @@
+{
+  "epoch": 0,
+  "batch": 0,
+  "step": 0,
+  "config": {
+    "model": "Tongyi-MAI/Z-Image",
+    "pairs": "~/data/dpo-c1",
+    "init_lora": "~/runs/pilot-r64v2/final/pytorch_lora_weights.safetensors",
+    "s3": "",
+    "seed": 0,
+    "gradient_checkpointing": true,
+    "lora": {
+      "rank": 64,
+      "alpha": 64,
+      "targets": [
+        "to_q",
+        "to_k",
+        "to_v",
+        "to_out.0",
+        "feed_forward.w1",
+        "feed_forward.w2",
+        "feed_forward.w3"
+      ]
+    },
+    "loss": {
+      "text_weight": 5.0
+    },
+    "timesteps": {
+      "dist": "logit_normal",
+      "mean": 0.0,
+      "std": 1.0
+    },
+    "dpo": {
+      "beta": 500,
+      "sft_weight": 0.0
+    },
+    "optim": {
+      "lr": 5e-05,
+      "accum": 8,
+      "warmup": 20,
+      "max_grad_norm": 1.0
+    },
+    "epochs": 4,
+    "ckpt_minutes": 30,
+    "val": {
+      "every": 50
+    }
+  },
+  "commit": "",
+  "started": "2026-10-29T09:54:07Z",
+  "lora_params": 158760960
+}

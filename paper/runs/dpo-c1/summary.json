@@ -1,0 +1,9 @@
+{
+  "steps": 418,
+  "pairs_seen": 3340,
+  "seconds": 25428.8,
+  "peak_mem_gb": 18.92,
+  "lora_params": 158760960,
+  "gpu": "NVIDIA L40S",
+  "commit": ""
+}

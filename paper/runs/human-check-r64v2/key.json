@@ -1,0 +1,122 @@
+[
+ {
+  "n": 1,
+  "image_id": "seen-1-2-09_s42",
+  "split": "seen",
+  "target_text": "빵집"
+ },
+ {
+  "n": 2,
+  "image_id": "seen-6-10-00_s42",
+  "split": "seen",
+  "target_text": "신선한 과일 채소"
+ },
+ {
+  "n": 3,
+  "image_id": "usyl-18_s42",
+  "split": "unseen_syllable",
+  "target_text": "똌붟둾"
+ },
+ {
+  "n": 4,
+  "image_id": "unseen-3-5-21_s42",
+  "split": "unseen",
+  "target_text": "윤슬공방"
+ },
+ {
+  "n": 5,
+  "image_id": "seen-1-2-06_s42",
+  "split": "seen",
+  "target_text": "식당"
+ },
+ {
+  "n": 6,
+  "image_id": "usyl-13_s42",
+  "split": "unseen_syllable",
+  "target_text": "펮쑔"
+ },
+ {
+  "n": 7,
+  "image_id": "usyl-01_s42",
+  "split": "unseen_syllable",
+  "target_text": "꾔마을"
+ },
+ {
+  "n": 8,
+  "image_id": "unseen-6-10-14_s42",
+  "split": "unseen",
+  "target_text": "황새울목공방"
+ },
+ {
+  "n": 9,
+  "image_id": "seen-6-10-18_s42",
+  "split": "seen",
+  "target_text": "여름 신상품 입고"
+ },
+ {
+  "n": 10,
+  "image_id": "usyl-07_s42",
+  "split": "unseen_syllable",
+  "target_text": "쁷학교"
+ },
+ {
+  "n": 11,
+  "image_id": "unseen-3-5-02_s42",
+  "split": "unseen",
+  "target_text": "너와집"
+ },
+ {
+  "n": 12,
+  "image_id": "seen-3-5-16_s42",
+  "split": "seen",
+  "target_text": "안경원"
+ },
+ {
+  "n": 13,
+  "image_id": "unseen-6-10-24_s42",
+  "split": "unseen",
+  "target_text": "너럭바위찻집"
+ },
+ {
+  "n": 14,
+  "image_id": "usyl-02_s42",
+  "split": "unseen_syllable",
+  "target_text": "툟상회"
+ },
+ {
+  "n": 15,
+  "image_id": "unseen-1-2-07_s42",
+  "split": "unseen",
+  "target_text": "짚신"
+ },
+ {
+  "n": 16,
+  "image_id": "unseen-1-2-12_s42",
+  "split": "unseen",
+  "target_text": "뙈기"
+ },
+ {
+  "n": 17,
+  "image_id": "seen-11+-08_s42",
+  "split": "seen",
+  "target_text": "안전을 위해 손잡이를 잡아 주세요"
+ },
+ {
+  "n": 18,
+  "image_id": "seen-1-2-19_s42",
+  "split": "seen",
+  "target_text": "휴무"
+ },
+ {
+  "n": 19,
+  "image_id": "unseen-1-2-04_s42",
+  "split": "unseen",
+  "target_text": "똬리"
+ },
+ {
+  "n": 20,
+  "image_id": "usyl-19_s42",
+  "split": "unseen_syllable",
+  "target_text": "셎듹뵃"
+ }
+]

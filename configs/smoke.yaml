@@ -1,0 +1,23 @@
+# 100-step smoke test of scripts/train_lora.py on whatever precomp exists (synth only is enough).
+# python scripts/train_lora.py --config configs/smoke.yaml --run ~/runs/smoke --max-steps 100 --no-eval
+model: Tongyi-MAI/Z-Image
+precomp: ~/data/precomp-try
+s3: ""
+seed: 0
+mix:
+  synth: 0
+variants: [ko_long, ko_short, en]
+caption_dropout: 0.1
+gradient_checkpointing: true
+lora:
+  rank: 32
+  alpha: 32
+  targets: [to_q, to_k, to_v, to_out.0]
+optim:
+  lr: 1.0e-4
+  warmup: 20
+  max_grad_norm: 1.0
+stages:
+  - {res: 512, batch: 8, epochs: 1}
+ckpt_minutes: 3
+eval: {}
